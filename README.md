@@ -8,7 +8,7 @@ Predict the hourly bike rental `count` from temporal, seasonal, and weather-rela
 
 ## Data leakage warning
 
-`casual` and `registered` sum exactly to `count` and are **not** present in `test.csv`. They must **never** be used as features for a model that predicts `count`. This rule is enforced in `config/config.yaml`, in `src/bike_sharing/preprocessing.py`, and by a unit test in `tests/test_preprocessing.py`.
+`casual` and `registered` sum exactly to `count` and are **not** present in `test.csv`. They must **never** be used as features for a model that predicts `count`. Starting in Phase 1, this rule will be enforced in three places: `config/config.yaml` (`drop_columns`), `src/bike_sharing/preprocessing.py` (`drop_leakage_columns`), and a unit test in `tests/test_preprocessing.py`.
 
 ## Project structure
 
@@ -48,6 +48,18 @@ Run tests:
 ```bash
 pytest
 ```
+
+## Data setup
+
+The raw CSVs are not tracked in the repo. Download them from the Kaggle competition page and place the three files exactly as follows:
+
+```
+data/raw/train.csv
+data/raw/test.csv
+data/raw/sampleSubmission.csv
+```
+
+Source: https://www.kaggle.com/c/bike-sharing-demand/data (requires a Kaggle account). Expected sizes: `train.csv` ~10,887 rows, `test.csv` ~6,493 rows. All downstream code in `src/` and `scripts/` reads from these paths via `config/config.yaml`.
 
 ## End-to-end pipeline (after later phases land)
 
