@@ -35,10 +35,20 @@ def load_config(path: str | Path) -> dict[str, Any]:
     return cfg
 
 
-def _validate(cfg: dict[str, Any]) -> None:
+def _validate(cfg: Any) -> None:
+    if not isinstance(cfg, dict):
+        raise ValueError(
+            "config file did not parse to a mapping; got "
+            f"{type(cfg).__name__}. Is the YAML empty or malformed?"
+        )
     missing = [k for k in REQUIRED_TOP_LEVEL_KEYS if k not in cfg]
     if missing:
         raise ValueError(f"config missing required keys: {missing}")
+    if not isinstance(cfg["paths"], dict):
+        raise ValueError(
+            "config['paths'] must be a mapping of name -> relative path; "
+            f"got {type(cfg['paths']).__name__}."
+        )
     missing_paths = [k for k in REQUIRED_PATH_KEYS if k not in cfg["paths"]]
     if missing_paths:
         raise ValueError(f"config['paths'] missing required keys: {missing_paths}")

@@ -73,3 +73,23 @@ def test_missing_raw_file_raises_clear_error(tmp_path, cfg):
     }
     with pytest.raises(FileNotFoundError, match="kaggle.com"):
         load_raw_train(broken_cfg)
+
+
+def test_empty_yaml_raises_mapping_error(tmp_path):
+    bad = tmp_path / "empty.yaml"
+    bad.write_text("")
+    with pytest.raises(ValueError, match="mapping"):
+        load_config(bad)
+
+
+def test_null_paths_raises_mapping_error(tmp_path):
+    bad = tmp_path / "bad_paths.yaml"
+    bad.write_text(
+        "seed: 42\n"
+        "target: count\n"
+        "datetime_col: datetime\n"
+        "paths: null\n"
+        "drop_columns: []\n"
+    )
+    with pytest.raises(ValueError, match="paths"):
+        load_config(bad)
