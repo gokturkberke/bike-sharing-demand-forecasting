@@ -1,0 +1,37 @@
+# Python
+.venv/
+venv/
+env/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+
+# Data — keep directory structure (via .gitkeep) but don't track the actual files
+data/raw/*
+data/interim/*
+data/processed/*
+!data/raw/.gitkeep
+!data/interim/.gitkeep
+!data/processed/.gitkeep
+
+# Trained model artifacts
+models/*
+!models/.gitkeep
+
+# Generated reports (regeneratable); keep metrics.json if produced
+reports/figures/*
+reports/submissions/*
+!reports/figures/.gitkeep
+!reports/submissions/.gitkeep
