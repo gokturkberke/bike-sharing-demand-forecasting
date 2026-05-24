@@ -1,0 +1,23 @@
+# Single source of truth for paths, target, seed, and column policy.
+# Paths are written relative to the project root and resolved to absolute
+# paths by src/bike_sharing/config.py at load time.
+
+seed: 42
+target: count
+datetime_col: datetime
+
+paths:
+  raw_train: data/raw/train.csv
+  raw_test: data/raw/test.csv
+  raw_sample_submission: data/raw/sampleSubmission.csv
+  interim_dir: data/interim
+  processed_dir: data/processed
+  models_dir: models
+  reports_dir: reports
+
+# Columns that must never appear in the feature matrix for the count model.
+# casual and registered sum to count and are absent from test.csv (leakage).
+# datetime is dropped only after time features are derived from it (Phase 3).
+drop_columns:
+  - casual
+  - registered
