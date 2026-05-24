@@ -26,6 +26,15 @@ EXPECTED_TRAIN_COLUMNS = {
     "count",
 }
 EXPECTED_TEST_COLUMNS = EXPECTED_TRAIN_COLUMNS - {"casual", "registered", "count"}
+REQUIRED_PATHS = (
+    "raw_train",
+    "raw_test",
+    "raw_sample_submission",
+    "interim_dir",
+    "processed_dir",
+    "models_dir",
+    "reports_dir",
+)
 
 
 @pytest.fixture(scope="module")
@@ -92,4 +101,22 @@ def test_null_paths_raises_mapping_error(tmp_path):
         "drop_columns: []\n"
     )
     with pytest.raises(ValueError, match="paths"):
+        load_config(bad)
+
+
+@pytest.mark.parametrize("missing_path", REQUIRED_PATHS)
+def test_missing_pipeline_path_raises_clear_error(tmp_path, missing_path):
+    defined_paths = "\n".join(
+        f"  {path}: data/{path}" for path in REQUIRED_PATHS if path != missing_path
+    )
+    bad = tmp_path / f"missing_{missing_path}.yaml"
+    bad.write_text(
+        "seed: 42\n"
+        "target: count\n"
+        "datetime_col: datetime\n"
+        "paths:\n"
+        f"{defined_paths}\n"
+        "drop_columns: [casual, registered]\n"
+    )
+    with pytest.raises(ValueError, match=missing_path):
         load_config(bad)

@@ -41,13 +41,13 @@ Package and runtime truth:
 - Treat `requirements.txt`, `pyproject.toml`, and `README.md` as the most reliable runtime truth for execution decisions.
 
 Architecture and ownership:
-- The repository is currently at Phase 0: package scaffold, raw-data directory layout, documentation, and dependency setup exist; forecasting modules and tests are introduced phase by phase.
+- The repository is currently at Phase 1: package scaffold, raw-data loading, configuration validation, leakage preprocessing, and their automated tests exist; feature engineering and modeling modules are introduced in later phases.
 - `src/bike_sharing/` is the importable package for reusable project logic.
-- `config/config.yaml`, once added, owns paths, random seed, target name, excluded columns, datetime configuration, and feature flags.
+- `config/config.yaml` owns paths, random seed, target name, excluded columns, and datetime configuration; feature flags may be added in later phases.
 - `config/models.yaml`, once added, owns model hyperparameters rather than embedding experimental settings in scripts.
-- `src/bike_sharing/config.py`, once added, loads and validates configuration.
-- `src/bike_sharing/data.py`, once added, loads local raw data, parses datetimes, and owns time-aware split helpers.
-- `src/bike_sharing/preprocessing.py`, once added, owns leakage-column removal and target transformations.
+- `src/bike_sharing/config.py` loads and validates configuration, including required pipeline paths.
+- `src/bike_sharing/data.py` loads local raw data and parses datetimes; time-aware split helpers may be added with modeling work.
+- `src/bike_sharing/preprocessing.py` owns leakage-column removal and target transformations.
 - `src/bike_sharing/features.py`, once added, owns reusable feature construction and must remove raw datetime only after deriving time features.
 - `src/bike_sharing/models.py`, `train.py`, `evaluate.py`, and `predict.py`, once added, own estimator creation, fitting/validation, metrics, and prediction behavior.
 - `scripts/` contains thin command-line orchestrators only; business logic belongs in `src/bike_sharing/`.

@@ -6,7 +6,6 @@ from typing import Any
 import yaml
 
 REQUIRED_TOP_LEVEL_KEYS = ("seed", "target", "datetime_col", "paths", "drop_columns")
-REQUIRED_PATH_KEYS = ("raw_train", "raw_test")
 PATH_KEYS_TO_RESOLVE = (
     "raw_train",
     "raw_test",
@@ -16,6 +15,7 @@ PATH_KEYS_TO_RESOLVE = (
     "models_dir",
     "reports_dir",
 )
+REQUIRED_PATH_KEYS = PATH_KEYS_TO_RESOLVE
 
 
 def load_config(path: str | Path) -> dict[str, Any]:

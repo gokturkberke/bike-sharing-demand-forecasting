@@ -41,13 +41,13 @@ Package and runtime truth:
 - Treat `requirements.txt`, `pyproject.toml`, and `README.md` as the most reliable runtime truth for execution decisions.
 
 Architecture and ownership:
-- The repository is currently at Phase 0: package scaffold, raw-data directory layout, documentation, and dependency setup exist; forecasting modules and tests are introduced phase by phase.
+- The repository is currently at Phase 1: package scaffold, raw-data loading, configuration validation, leakage preprocessing, and their automated tests exist; feature engineering and modeling modules are introduced in later phases.
 - `src/bike_sharing/` is the importable package for reusable project logic.
-- `config/config.yaml`, once added, owns paths, random seed, target name, excluded columns, datetime configuration, and feature flags.
+- `config/config.yaml` owns paths, random seed, target name, excluded columns, and datetime configuration; feature flags may be added in later phases.
 - `config/models.yaml`, once added, owns model hyperparameters rather than embedding experimental settings in scripts.
-- `src/bike_sharing/config.py`, once added, loads and validates configuration.
-- `src/bike_sharing/data.py`, once added, loads local raw data, parses datetimes, and owns time-aware split helpers.
-- `src/bike_sharing/preprocessing.py`, once added, owns leakage-column removal and target transformations.
+- `src/bike_sharing/config.py` loads and validates configuration, including required pipeline paths.
+- `src/bike_sharing/data.py` loads local raw data and parses datetimes; time-aware split helpers may be added with modeling work.
+- `src/bike_sharing/preprocessing.py` owns leakage-column removal and target transformations.
 - `src/bike_sharing/features.py`, once added, owns reusable feature construction and must remove raw datetime only after deriving time features.
 - `src/bike_sharing/models.py`, `train.py`, `evaluate.py`, and `predict.py`, once added, own estimator creation, fitting/validation, metrics, and prediction behavior.
 - `scripts/` contains thin command-line orchestrators only; business logic belongs in `src/bike_sharing/`.
@@ -102,7 +102,8 @@ Non-negotiable rules: - No emojis ever in code, logs, commits, or generated docu
 Repo-safe engineering standards: - Preserve the existing module boundaries between src/, scripts/, tests/, and config/. - Do not silently rename model files, artifact files, registry names, endpoint paths, schema fields, or config keys. - Do not introduce broad refactors during feature work or bug work unless explicitly requested. - Prefer explicit, testable logic over abstraction-heavy wrappers and fallback-heavy control flow. - Keep Streamlit UI thin; keep recommendation behavior in src/recommenders.py and data loading in src/data_access.py. - If you discover drift or contradictions, document them clearly in the task output instead of masking them.
 
 ## 7. Experiment Planning And Execution Log
-+ This section defines how every experiment / improvement plan in this project is documented and how its execution is marked. Goal: every plan and its outcome live in one place (`docs/experiments/`) in a commit-traceable way, so future references to an experiment are `grep`-able.
++ Scope: this section applies to **modeling experiments and improvement plans** — sweeps, ablations, transform changes, hyperparameter studies, and anything else whose outcome is judged against a metric. Structural phase work (scaffolding, config setup, plain feature engineering, submission plumbing) follows the §4 strategy loop and uses the approved roadmap as its plan artifact; it does not require a separate `docs/experiments/` file.
++ This section defines how every such experiment / improvement plan is documented and how its execution is marked. Goal: every plan and its outcome live in one place (`docs/experiments/`) in a commit-traceable way, so future references to an experiment are `grep`-able.
 + Where the plan file goes, and what it is named:
 + All new plans are saved under `docs/experiments/`.
 + Filename format: `{YYYY-MM-DD}_{plan-name}.md` (kebab-case plan name). Example: `2026-05-14_recency-weighting-sweep.md`, `2026-05-20_pri-transform-revisit.md`.
