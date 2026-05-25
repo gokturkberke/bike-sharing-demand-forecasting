@@ -30,8 +30,9 @@ data/processed/*
 models/*
 !models/.gitkeep
 
-# Generated reports (regeneratable); keep metrics.json if produced
+# Generated reports (regeneratable); keep metrics.json and PNG figures
 reports/figures/*
 reports/submissions/*
 !reports/figures/.gitkeep
+!reports/figures/*.png
 !reports/submissions/.gitkeep
