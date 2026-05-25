@@ -122,6 +122,10 @@ plt.show()
 """
 
 WEATHER_CODE = """\
+weather_counts = df["weather"].value_counts().sort_index()
+print("observations per weather category:")
+print(weather_counts.to_string())
+
 fig, ax = plt.subplots(figsize=(8, 4))
 sns.boxplot(
     data=df, x="weather", y="count",
@@ -130,6 +134,13 @@ sns.boxplot(
 ax.set_title("Count distribution by weather category")
 ax.set_xlabel("weather (1=clear, 2=mist, 3=light rain/snow, 4=heavy)")
 ax.set_ylabel("count")
+# Annotate sample size under each category so a reader can see that
+# category 4 has only one observation.
+ymin, ymax = ax.get_ylim()
+for i, (cat, n) in enumerate(weather_counts.items()):
+    ax.text(i, ymin - 0.06 * (ymax - ymin), f"n={n}",
+            ha="center", va="top", fontsize=9, color="dimgray")
+ax.set_ylim(ymin - 0.10 * (ymax - ymin), ymax)
 fig.tight_layout()
 fig.savefig(FIG_DIR / "04_weather_impact.png", dpi=120, bbox_inches="tight")
 plt.show()
@@ -182,11 +193,12 @@ CELLS = [
     new_markdown_cell(
         "## 3. Target distribution\n"
         "\n"
-        "`count` is heavily right-skewed: many low-demand hours, a long tail of "
-        "high-demand hours. Applying `log1p` yields a roughly symmetric "
-        "distribution that is friendlier for linear models and matches Kaggle's "
-        "RMSLE evaluation. The modeling pipeline trains on `log1p(count)` and "
-        "inverts with `expm1`."
+        "`count` is heavily right-skewed (skew ≈ +1.24): many low-demand "
+        "hours, a long tail of high-demand hours. Applying `log1p` reduces "
+        "the strong right skew (skew ≈ -0.85) — the result is not perfectly "
+        "symmetric, but it is much friendlier for squared-error losses and "
+        "aligns with Kaggle's RMSLE evaluation. The modeling pipeline trains "
+        "on `log1p(count)` and inverts with `expm1`."
     ),
     new_code_cell(TARGET_DIST_CODE),
     new_markdown_cell(
@@ -211,32 +223,41 @@ CELLS = [
         "## 6. Weather impact\n"
         "\n"
         "Weather is encoded as 1=clear, 2=mist/cloudy, 3=light rain/snow, "
-        "4=heavy rain/snow. Demand declines monotonically with severity; "
-        "category 4 collapses to near zero. Useful as a sanity check before "
-        "model training and as a candidate for one-hot encoding."
+        "4=heavy rain/snow. Categories 1-3 show a monotonic decline in both "
+        "the mean and median of `count`. Category 4 holds only one row in "
+        "the training data (n=1), so its boxplot is a single point and no "
+        "conclusion can be drawn from it. The per-category sample counts "
+        "are annotated under the plot."
     ),
     new_code_cell(WEATHER_CODE),
     new_markdown_cell(
         "## 7. Correlation heatmap\n"
         "\n"
         "Pearson correlation of numeric predictors with `count`. `atemp` and "
-        "`temp` are nearly collinear (correlation ≈ 0.98), so a linear pipeline "
-        "should keep only one of them. Humidity is negatively correlated with "
-        "count; windspeed is weakly positively correlated."
+        "`temp` are nearly collinear (correlation ≈ 0.98). Because the first "
+        "linear model is Ridge, multicollinearity is handled by the L2 "
+        "penalty and does not force dropping either column at this stage — "
+        "the keep-both vs keep-one comparison is a Phase 4 CV decision. "
+        "Humidity is negatively correlated with count; windspeed is weakly "
+        "positively correlated."
     ),
     new_code_cell(CORRELATION_CODE),
     new_markdown_cell(
         "## Findings (feed into Phase 3 feature engineering)\n"
         "\n"
-        "- `count` is right-skewed; `log1p` transform yields a usable target "
-        "for linear models and aligns with RMSLE evaluation.\n"
+        "- `count` is right-skewed (skew ≈ +1.24); `log1p` reduces the skew "
+        "(to ≈ -0.85) and aligns with RMSLE evaluation, so train on "
+        "`log1p(count)`.\n"
         "- Hourly demand shows a strong working-day vs non-working-day split; "
         "encode `hour` explicitly and consider a cyclic (sin/cos) variant.\n"
         "- Demand follows a clear seasonal arc; encode `month` and `year`.\n"
-        "- Weather category 4 collapses demand; categories 1-3 form a graded "
-        "decline.\n"
-        "- `atemp` and `temp` are essentially collinear; drop `atemp` in the "
-        "linear pipeline. Humidity is negatively correlated with demand."
+        "- For categories 1-3, more severe weather lowers demand. Category 4 "
+        "appears only once in training, so it informs neither feature "
+        "engineering nor evaluation conclusions.\n"
+        "- `atemp` and `temp` are essentially collinear (≈ 0.98). Ridge "
+        "handles multicollinearity through L2 regularization, so this is a "
+        "Phase 4 CV decision (keep both vs drop one) rather than an EDA-time "
+        "drop. Humidity is negatively correlated with demand."
     ),
 ]
 

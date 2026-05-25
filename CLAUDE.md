@@ -41,7 +41,7 @@ Package and runtime truth:
 - Treat `requirements.txt`, `pyproject.toml`, and `README.md` as the most reliable runtime truth for execution decisions.
 
 Architecture and ownership:
-- The repository is currently at Phase 1: package scaffold, raw-data loading, configuration validation, leakage preprocessing, and their automated tests exist; feature engineering and modeling modules are introduced in later phases.
+- The repository is currently at Phase 2: in addition to the Phase 1 deliverables (package scaffold, raw-data loading, configuration validation, leakage preprocessing, and their automated tests), an executed EDA notebook lives at `notebooks/01_eda.ipynb` and five report figures are tracked under `reports/figures/01_count_distribution.png` through `05_correlation_heatmap.png`. Feature engineering and modeling modules are introduced in later phases.
 - `src/bike_sharing/` is the importable package for reusable project logic.
 - `config/config.yaml` owns paths, random seed, target name, excluded columns, and datetime configuration; feature flags may be added in later phases.
 - `config/models.yaml`, once added, owns model hyperparameters rather than embedding experimental settings in scripts.
