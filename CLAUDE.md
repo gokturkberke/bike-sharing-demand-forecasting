@@ -120,9 +120,9 @@ Repo-safe engineering standards: - Preserve the existing module boundaries betwe
 + Then a numbered list of items (`## 1) ...`, `## 2) ...`). Template for each item:
 +   - **Goal:** what will change (code / config / sweep parameter).
 +   - **Files:** paths to touch (with current line numbers or function names where useful).
-+   - **Steps:** sub-bullets, one logical operation per bullet (e.g. "add `data.train_outlier_sigma.BidderTotalBids: 3.0` to config", "run the sweep runner with a single trial and capture the log").
++   - **Steps:** sub-bullets, one logical operation per bullet (e.g. "compare a feature set including cyclic hour encodings against the baseline feature set and record validation RMSLE").
 +   - **Test / verification:** which unit test gets added or updated; which full-training output is compared against which metric table.
-+   - **Expected outcome:** decision criterion (e.g. how big a Q50 MAE delta counts as meaningful, where coverage should land relative to the target band).
++   - **Expected outcome:** decision criterion (e.g. how large an RMSLE improvement is required to adopt the experiment, with RMSE or MAE reported as secondary diagnostics where useful).
 +   - **DONE / DROPPED:** empty at authoring time; filled in during execution (see below).
 + Items are ordered by the **narrative**: dependencies before dependents, independents in parallel. The flow "test the hypothesis with a single trial -> if positive, expand to a sweep -> production decision" must always be visible — random ordering is not acceptable.
 + Execution / marking contract:
@@ -130,7 +130,7 @@ Repo-safe engineering standards: - Preserve the existing module boundaries betwe
 +   ```
 +   **DONE (commit `<hash>`):** {one or two sentences: what changed, which behavior was gained, any remaining side-effect.}
 +   - Metric / result: {small baseline-vs-experiment table if relevant}
-+   - Run id: {always include — found under `models/training/{target}/{run_id}/`}
++   - Result artifact: {path to the saved metrics table, comparison report, or submission artifact when one exists}
 +   - Sweep JSON: {if applicable, path under `docs/experiments/...sweep_...json`}
 +   - Decision: {shipped to production, shelved, or fed into another experiment}
 +   ```
@@ -144,4 +144,4 @@ Repo-safe engineering standards: - Preserve the existing module boundaries betwe
 + Pasted code blocks. A plan file is prose + bullets; code changes live in the commit.
 + Pre-flight (before creating a new plan file):
 + `grep` under `docs/experiments/` for a half-open plan on the same topic. If one exists, append a new item to that plan file — do not create a new one.
-+ Record the current benchmark / baseline run id before the plan starts (write it in the **Motivation** section). This is what later makes statements like "experiment X is +0.4 Q50 MAE vs baseline" reproducible.
++ Record the current benchmark / baseline run id before the plan starts (write it in the **Motivation** section). This is what later makes statements like "experiment X improves validation RMSLE by 0.01 versus the recorded baseline" reproducible.
