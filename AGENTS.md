@@ -41,7 +41,7 @@ Package and runtime truth:
 - Treat `requirements.txt`, `pyproject.toml`, and `README.md` as the most reliable runtime truth for execution decisions.
 
 Architecture and ownership:
-- The repository is currently at Phase 3: in addition to the Phase 1+2 deliverables (package scaffold, raw-data loading, configuration validation, leakage preprocessing, automated tests, and the executed EDA notebook with five report figures), feature engineering is shipped. `src/bike_sharing/features.py` builds the time-derived and cyclic feature set (hour, day, dayofweek, month, year, is_weekend, hour_sin/cos, month_sin/cos) while preserving `datetime`; `scripts/prepare_data.py` orchestrates `load_raw -> build_features -> drop_leakage_columns -> parquet` and writes `data/processed/{train,test}.parquet` (gitignored); `notebooks/02_feature_engineering.ipynb` validates cyclic encoding and the hour x workingday interaction with three additional figures under `reports/figures/06-08_*.png`; `tests/test_features.py` adds nine contract tests. Modeling modules are introduced in later phases.
+- The repository is currently at Phase 3: in addition to the Phase 1+2 deliverables (package scaffold, raw-data loading, configuration validation, leakage preprocessing, automated tests, and the executed EDA notebook with five report figures), feature engineering is shipped. `src/bike_sharing/features.py` builds the time-derived and cyclic feature set (hour, dayofweek, month, year, is_weekend, hour_sin/cos, month_sin/cos) while preserving `datetime`. Day-of-month is intentionally excluded because the Kaggle split puts days 1-19 in train and 20-31 in test, so the feature would be out-of-distribution at test time; `tests/test_features.py::test_train_and_test_predictor_schemas_match` locks the contract that train predictors equal test predictors. `scripts/prepare_data.py` orchestrates `load_raw -> build_features -> drop_leakage_columns -> parquet` and writes `data/processed/{train,test}.parquet` (gitignored); `notebooks/02_feature_engineering.ipynb` validates cyclic encoding and the hour x workingday interaction with three additional figures under `reports/figures/06-08_*.png`; `tests/test_features.py` adds eleven contract tests. Modeling modules are introduced in later phases.
 - `src/bike_sharing/` is the importable package for reusable project logic.
 - `config/config.yaml` owns paths, random seed, target name, excluded columns, and datetime configuration; feature flags may be added in later phases.
 - `config/models.yaml`, once added, owns model hyperparameters rather than embedding experimental settings in scripts.
@@ -114,7 +114,7 @@ Repo-safe engineering standards: - Preserve the existing module boundaries betwe
 + Header block at the top of every plan file:
 +   - **Date:** {YYYY-MM-DD}
 +   - **Topic:** short title
-+   - **Motivation:** which report section (`§X`) or which metric anomaly triggered this plan; link the baseline run id(s) so comparisons stay reproducible.
++   - **Motivation:** which report section (`§X`) or which metric anomaly triggered this plan; record the baseline reference (commit hash plus the metrics from `reports/metrics.json` or the equivalent comparison artifact) so the experiment is reproducibly comparable.
 +   - **Hypothesis:** the proposition under test, expressed as a measurable claim (e.g. "`log1p` target outperforms Box-Cox on RMSLE by at least 0.005" or "cyclic hour encoding lowers Ridge RMSLE by at least 0.01 vs raw hour-of-day").
 +   - **Preconditions:** code / config / cache state that must already be in place before the plan starts.
 + Then a numbered list of items (`## 1) ...`, `## 2) ...`). Template for each item:
@@ -144,4 +144,4 @@ Repo-safe engineering standards: - Preserve the existing module boundaries betwe
 + Pasted code blocks. A plan file is prose + bullets; code changes live in the commit.
 + Pre-flight (before creating a new plan file):
 + `grep` under `docs/experiments/` for a half-open plan on the same topic. If one exists, append a new item to that plan file — do not create a new one.
-+ Record the current benchmark / baseline run id before the plan starts (write it in the **Motivation** section). This is what later makes statements like "experiment X improves validation RMSLE by 0.01 versus the recorded baseline" reproducible.
++ Record the current baseline reference before the plan starts (commit hash plus the metric values it produced, written in the **Motivation** section). This is what later makes statements like "experiment X improves validation RMSLE by 0.01 versus the recorded baseline" reproducible.

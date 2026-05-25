@@ -21,7 +21,7 @@ Predict the hourly bike rental `count` from temporal, seasonal, and weather-rela
 │   └── processed/ # Feature-engineered parquet files
 ├── docs/          # Project proposal and notes
 ├── notebooks/     # EDA and experimentation notebooks
-├── src/bike_sharing/   # Reusable package: data, features, models, train, evaluate, predict
+├── src/bike_sharing/   # Reusable package; current: config, data, preprocessing, features (models, train, evaluate, predict added in later phases)
 ├── scripts/       # Thin orchestrators that call into src/
 ├── tests/         # Unit tests (including leakage guard)
 ├── models/        # Saved trained models (gitignored)

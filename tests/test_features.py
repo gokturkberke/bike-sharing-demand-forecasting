@@ -88,6 +88,30 @@ def test_build_features_on_test_set(cfg):
     assert "count" not in df.columns
 
 
+def test_day_is_not_a_feature(featured_train, cfg):
+    # The Kaggle split puts days 1-19 in train and 20-31 in test, so
+    # day-of-month is out-of-distribution at test time. The feature
+    # pipeline must not surface it.
+    assert "day" not in featured_train.columns
+    assert "day" not in ADDED_FEATURE_COLUMNS
+
+
+def test_train_and_test_predictor_schemas_match(cfg):
+    # After feature engineering and leakage removal, the predictor
+    # column list on train must equal the predictor column list on test.
+    # This contract guards against regressions like the day-feature bug.
+    train_processed = drop_leakage_columns(
+        build_features(load_raw_train(cfg), cfg), cfg
+    )
+    test_processed = build_features(load_raw_test(cfg), cfg)
+    train_predictors = train_processed.drop(columns=["count", cfg["datetime_col"]])
+    test_predictors = test_processed.drop(columns=[cfg["datetime_col"]])
+    assert list(train_predictors.columns) == list(test_predictors.columns)
+    assert "casual" not in train_predictors.columns
+    assert "registered" not in train_predictors.columns
+    assert "day" not in train_predictors.columns
+
+
 def test_cyclic_encoding_continuity():
     # Hour 23 should be adjacent to hour 0 in the sin/cos space; this is
     # the whole reason for the cyclic encoding.

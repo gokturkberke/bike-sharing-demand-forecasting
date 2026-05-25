@@ -15,9 +15,13 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+# `day` is intentionally excluded: the Kaggle split puts days 1-19 in
+# train and days 20-31 in test, so day-of-month has zero overlap between
+# the two sets. Including it would let trees split on out-of-distribution
+# values at test time and force linear models to extrapolate. See
+# AGENTS.md s2 for the original data-contract note.
 TIME_FEATURE_COLUMNS = (
     "hour",
-    "day",
     "dayofweek",
     "month",
     "year",
@@ -45,7 +49,6 @@ def build_features(df: pd.DataFrame, cfg: dict[str, Any]) -> pd.DataFrame:
     ts = out[datetime_col]
 
     out["hour"] = ts.dt.hour.astype("int16")
-    out["day"] = ts.dt.day.astype("int16")
     out["dayofweek"] = ts.dt.dayofweek.astype("int16")
     out["month"] = ts.dt.month.astype("int16")
     out["year"] = ts.dt.year.astype("int16")
