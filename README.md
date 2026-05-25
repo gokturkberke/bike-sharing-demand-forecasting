@@ -28,6 +28,8 @@ Predict the hourly bike rental `count` from temporal, seasonal, and weather-rela
 └── reports/       # Figures, metrics, and Kaggle submissions
 ```
 
+Layer responsibilities (notebooks vs `src/` vs `scripts/` vs `config/` vs `reports/`) and the rules that govern when each layer accepts new code are documented in AGENTS.md §2 and §6.
+
 ## Setup
 
 ```bash
