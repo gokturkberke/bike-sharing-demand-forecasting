@@ -86,9 +86,9 @@ plt.show()
 
 HOUR_INTERACTION_CODE = """\
 # Mean count at every hour, split by workingday. The Phase 2 EDA showed
-# this interaction was the strongest temporal signal. The cyclic
-# encoding is meant to make this learnable by linear models without an
-# explicit categorical encoding of hour.
+# this interaction was the strongest temporal signal. Cyclic terms
+# preserve hour wrap-around, but the two distinct workingday curves
+# require richer Ridge features or interactions to be evaluated in Phase 4.
 mean_by_hour_workday = (
     df.groupby(["hour", "workingday"], as_index=False)["count"].mean()
 )
@@ -143,7 +143,7 @@ CELLS = [
     new_markdown_cell(
         "## 1. Apply `build_features` to the training frame\n"
         "\n"
-        "Confirms that ten new columns are added with sensible dtypes and "
+        "Confirms that nine new columns are added with sensible dtypes and "
         "ranges. `datetime` is preserved so the same pipeline can later "
         "build a submission for the test set."
     ),
