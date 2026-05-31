@@ -6,6 +6,9 @@ seed: 42
 target: count
 datetime_col: datetime
 
+cv:
+  n_splits: 5
+
 paths:
   raw_train: data/raw/train.csv
   raw_test: data/raw/test.csv
