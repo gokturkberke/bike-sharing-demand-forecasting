@@ -70,10 +70,10 @@ pytest
 ```bash
 python scripts/prepare_data.py
 python scripts/train_model.py --model ridge
-python scripts/train_model.py --model rf
-python scripts/train_model.py --model xgb
-python scripts/evaluate_model.py
-python scripts/generate_submission.py --model xgb   # writes a datetime,count prediction artifact
+python scripts/train_model.py --model random_forest
+python scripts/train_model.py --model gradient_boosting
+python scripts/train_model.py --model xgb            # Phase 6
+python scripts/generate_submission.py --model xgb    # Phase 6: writes a datetime,count prediction artifact
 ```
 
 ## Results
@@ -87,8 +87,8 @@ Day-of-month holdout (all four metrics):
 | Mean baseline | 1.531 | 183.1 | 142.6 | -0.00 | 1.402 |
 | Hourly-mean baseline | 0.755 | 125.9 | 86.1 | 0.53 | 0.739 |
 | Ridge (cyclic + log1p) | 0.906 | 162.2 | 106.2 | 0.21 | 0.987 |
-| Random Forest | — | — | — | — | — |
-| Gradient Boosting | — | — | — | — | — |
+| Random Forest | 0.330 | 51.9 | 30.4 | 0.92 | 0.514 |
+| Gradient Boosting | 0.334 | 59.0 | 36.5 | 0.90 | 0.471 |
 | XGBoost | — | — | — | — | — |
 
-Both validation views agree: hourly-mean > ridge > mean. Ridge with first-harmonic cyclic features cannot represent the bimodal commuter pattern, so it trails the simple hour-of-day average; trees (Phase 5) and richer linear features are expected to close the gap. The consolidated results-and-interpretation report (Phase 7) ties these numbers back to the environmental and temporal questions in the proposal.
+The tree models change the picture: Random Forest and Gradient Boosting beat every baseline and Ridge on all metrics and both validation views (holdout R² ~0.90), because they capture the `hour × workingday` interaction non-linearly using the full feature set that the linear model had to drop. Ridge still trails the simple hour-of-day average — first-harmonic cyclic features cannot represent the bimodal commuter pattern. Feature importance is dominated by the temporal signal (hour, workingday, year), with environmental inputs (temperature, humidity, weather, season) as a real but secondary tier. The consolidated results-and-interpretation report (Phase 7) ties these numbers back to the environmental and temporal questions in the proposal.

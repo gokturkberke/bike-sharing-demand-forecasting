@@ -21,18 +21,20 @@ from pathlib import Path
 import joblib
 import pandas as pd
 
-from bike_sharing.config import load_config
+from bike_sharing.config import load_config, load_models_config
 from bike_sharing.models import MODEL_FACTORIES, get_model
 from bike_sharing.train import evaluate_holdout, fit_and_cv
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CONFIG_PATH = PROJECT_ROOT / "config" / "config.yaml"
+DEFAULT_MODELS_CONFIG_PATH = PROJECT_ROOT / "config" / "models.yaml"
 
 
 def main(model_name: str, config_path: Path = DEFAULT_CONFIG_PATH) -> None:
     cfg = load_config(config_path)
     target = cfg["target"]
     datetime_col = cfg["datetime_col"]
+    params = load_models_config(DEFAULT_MODELS_CONFIG_PATH).get(model_name, {})
 
     train_path = Path(cfg["paths"]["processed_dir"]) / "train.parquet"
     if not train_path.exists():
@@ -46,12 +48,13 @@ def main(model_name: str, config_path: Path = DEFAULT_CONFIG_PATH) -> None:
     datetime = df[datetime_col]
     X = df.drop(columns=[target, datetime_col])
 
-    model = get_model(model_name, cfg)
-    cv_summary = fit_and_cv(model, X, y, datetime, cfg)
-    holdout_summary = evaluate_holdout(get_model(model_name, cfg), X, y, datetime, cfg)
+    cv_summary = fit_and_cv(get_model(model_name, cfg, params), X, y, datetime, cfg)
+    holdout_summary = evaluate_holdout(
+        get_model(model_name, cfg, params), X, y, datetime, cfg
+    )
 
     # Fit on full train for the persisted artifact.
-    fitted = get_model(model_name, cfg).fit(X, y)
+    fitted = get_model(model_name, cfg, params).fit(X, y)
 
     models_dir = Path(cfg["paths"]["models_dir"])
     reports_dir = Path(cfg["paths"]["reports_dir"])

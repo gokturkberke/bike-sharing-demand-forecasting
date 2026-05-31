@@ -1,0 +1,20 @@
+# Model hyperparameters, separate from the pipeline config in config.yaml.
+# random_state is injected from config.yaml's `seed`, not set here.
+# These are sensible starting defaults, not the outcome of a tuning sweep;
+# a future hyperparameter study would record its chosen values here with an
+# inline comment pointing back to its docs/experiments/ plan file.
+
+ridge:
+  alpha: 1.0
+
+random_forest:
+  n_estimators: 300
+  max_depth: null
+  min_samples_leaf: 2
+  n_jobs: -1
+
+gradient_boosting:
+  n_estimators: 300
+  learning_rate: 0.05
+  max_depth: 3
+  subsample: 0.9

@@ -11,6 +11,7 @@ import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator, RegressorMixin
 from sklearn.compose import ColumnTransformer, TransformedTargetRegressor
+from sklearn.ensemble import GradientBoostingRegressor, RandomForestRegressor
 from sklearn.linear_model import Ridge
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
@@ -82,7 +83,21 @@ class HourlyMeanBaseline(BaseEstimator, RegressorMixin):
             )
 
 
-def _build_ridge(cfg: dict[str, Any]) -> TransformedTargetRegressor:
+def _log_target(regressor) -> TransformedTargetRegressor:
+    """Wrap an estimator so it trains on log1p(count) and inverts safely.
+
+    inverse_func is from_log1p (expm1 + clip-at-0), the project's target
+    inversion contract: predictions can never be negative. Since
+    from_log1p(log1p(y)) == y for non-negative y, check_inverse passes.
+    """
+    return TransformedTargetRegressor(
+        regressor=regressor,
+        func=np.log1p,
+        inverse_func=from_log1p,
+    )
+
+
+def _build_ridge(cfg: dict[str, Any], params: dict[str, Any]) -> TransformedTargetRegressor:
     """ColumnTransformer + Ridge over a log1p-transformed target.
 
     The ColumnTransformer drops raw ordinal time columns (see module
@@ -105,32 +120,53 @@ def _build_ridge(cfg: dict[str, Any]) -> TransformedTargetRegressor:
     inner = Pipeline(
         [
             ("pre", preprocessor),
-            ("ridge", Ridge(alpha=1.0, random_state=seed)),
+            ("ridge", Ridge(alpha=params.get("alpha", 1.0), random_state=seed)),
         ]
     )
-    # inverse_func is from_log1p (expm1 + clip-at-0), the project's target
-    # inversion contract, not bare expm1: a Ridge fit in log space can emit
-    # slightly negative values that expm1 would turn into negative demand.
-    # from_log1p(log1p(y)) == y for non-negative y, so check_inverse passes.
-    return TransformedTargetRegressor(
-        regressor=inner,
-        func=np.log1p,
-        inverse_func=from_log1p,
-    )
+    return _log_target(inner)
+
+
+def _build_random_forest(
+    cfg: dict[str, Any], params: dict[str, Any]
+) -> TransformedTargetRegressor:
+    """Random Forest over a log1p target, using the full feature set.
+
+    Unlike Ridge, trees are scale-invariant, so the raw ordinal time
+    columns (hour, month, dayofweek, year) are kept - no ColumnTransformer.
+    """
+    seed = int(cfg.get("seed", 42))
+    model = RandomForestRegressor(random_state=seed, **params)
+    return _log_target(model)
+
+
+def _build_gradient_boosting(
+    cfg: dict[str, Any], params: dict[str, Any]
+) -> TransformedTargetRegressor:
+    """Gradient Boosting over a log1p target, using the full feature set."""
+    seed = int(cfg.get("seed", 42))
+    model = GradientBoostingRegressor(random_state=seed, **params)
+    return _log_target(model)
 
 
 MODEL_FACTORIES = {
-    "mean_baseline": lambda cfg: MeanBaseline(),
-    "hourly_mean_baseline": lambda cfg: HourlyMeanBaseline(),
+    "mean_baseline": lambda cfg, params: MeanBaseline(),
+    "hourly_mean_baseline": lambda cfg, params: HourlyMeanBaseline(),
     "ridge": _build_ridge,
+    "random_forest": _build_random_forest,
+    "gradient_boosting": _build_gradient_boosting,
 }
 
 
-def get_model(name: str, cfg: dict[str, Any]):
-    """Return an unfit sklearn-compatible estimator by name."""
+def get_model(name: str, cfg: dict[str, Any], params: dict[str, Any] | None = None):
+    """Return an unfit sklearn-compatible estimator by name.
+
+    ``params`` are model-specific hyperparameters (from
+    ``config/models.yaml``); when omitted, each factory uses its own
+    sensible defaults.
+    """
     if name not in MODEL_FACTORIES:
         raise ValueError(
             f"Unknown model name: {name!r}. "
             f"Available: {sorted(MODEL_FACTORIES)}."
         )
-    return MODEL_FACTORIES[name](cfg)
+    return MODEL_FACTORIES[name](cfg, params or {})

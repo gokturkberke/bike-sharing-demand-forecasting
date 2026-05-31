@@ -5,11 +5,12 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from bike_sharing.config import load_config
+from bike_sharing.config import load_config, load_models_config
 from bike_sharing.data import load_raw_test, load_raw_train
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 CONFIG_PATH = PROJECT_ROOT / "config" / "config.yaml"
+MODELS_CONFIG_PATH = PROJECT_ROOT / "config" / "models.yaml"
 
 EXPECTED_TRAIN_COLUMNS = {
     "datetime",
@@ -119,6 +120,17 @@ def test_missing_cv_raises_error(tmp_path):
     )
     with pytest.raises(ValueError, match="cv"):
         load_config(bad)
+
+
+def test_load_models_config_returns_model_params():
+    models = load_models_config(MODELS_CONFIG_PATH)
+    assert {"ridge", "random_forest", "gradient_boosting"}.issubset(models)
+    assert models["random_forest"]["n_estimators"] > 0
+
+
+def test_load_models_config_missing_file_raises(tmp_path):
+    with pytest.raises(FileNotFoundError):
+        load_models_config(tmp_path / "nope.yaml")
 
 
 def test_cv_without_n_splits_raises_error(tmp_path):

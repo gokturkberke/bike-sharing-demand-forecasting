@@ -35,6 +35,27 @@ def load_config(path: str | Path) -> dict[str, Any]:
     return cfg
 
 
+def load_models_config(path: str | Path) -> dict[str, Any]:
+    """Load the per-model hyperparameter file (``config/models.yaml``).
+
+    Returns a mapping of model name -> hyperparameter dict. A model with
+    no entry simply gets ``{}`` from callers, falling back to the
+    factory's defaults. Raises if the file is missing so a typo in the
+    path fails loudly rather than silently using defaults everywhere.
+    """
+    models_path = Path(path).resolve()
+    if not models_path.exists():
+        raise FileNotFoundError(f"models config not found: {models_path}")
+    with models_path.open() as f:
+        loaded = yaml.safe_load(f)
+    if loaded is not None and not isinstance(loaded, dict):
+        raise ValueError(
+            f"models config must be a mapping of model -> params; "
+            f"got {type(loaded).__name__}."
+        )
+    return loaded or {}
+
+
 def _validate(cfg: Any) -> None:
     if not isinstance(cfg, dict):
         raise ValueError(

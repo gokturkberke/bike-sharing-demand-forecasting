@@ -47,7 +47,13 @@ def test_hourly_mean_baseline_requires_hour_column():
 
 
 def test_factory_known_names_return_estimators(cfg):
-    for name in ("mean_baseline", "hourly_mean_baseline", "ridge"):
+    for name in (
+        "mean_baseline",
+        "hourly_mean_baseline",
+        "ridge",
+        "random_forest",
+        "gradient_boosting",
+    ):
         model = get_model(name, cfg)
         assert hasattr(model, "fit")
         assert hasattr(model, "predict")
@@ -90,7 +96,60 @@ def test_ridge_predicts_in_original_scale(cfg):
 
 def test_ridge_inverse_clips_negative_predictions(cfg):
     # The Ridge target inversion must be the project's clipped contract
-    # (from_log1p), not bare expm1, so a submission can never carry
-    # negative demand even if the linear model emits a negative log value.
+    # (from_log1p), not bare expm1, so the prediction artifact can never
+    # carry negative demand even if the linear model emits a negative
+    # log value.
     model = get_model("ridge", cfg)
     assert model.inverse_func is from_log1p
+
+
+def _tree_feature_frame(n=300, seed=0):
+    # The full feature set the tree models consume (raw ordinals kept).
+    rng = np.random.default_rng(seed)
+    X = pd.DataFrame(
+        {
+            "season": rng.integers(1, 5, size=n),
+            "holiday": rng.integers(0, 2, size=n),
+            "workingday": rng.integers(0, 2, size=n),
+            "weather": rng.integers(1, 4, size=n),
+            "temp": rng.uniform(0, 40, size=n),
+            "atemp": rng.uniform(0, 45, size=n),
+            "humidity": rng.uniform(0, 100, size=n),
+            "windspeed": rng.uniform(0, 50, size=n),
+            "hour": rng.integers(0, 24, size=n),
+            "dayofweek": rng.integers(0, 7, size=n),
+            "month": rng.integers(1, 13, size=n),
+            "year": rng.integers(2011, 2013, size=n),
+            "is_weekend": rng.integers(0, 2, size=n),
+            "hour_sin": rng.uniform(-1, 1, size=n),
+            "hour_cos": rng.uniform(-1, 1, size=n),
+            "month_sin": rng.uniform(-1, 1, size=n),
+            "month_cos": rng.uniform(-1, 1, size=n),
+        }
+    )
+    y = np.abs(rng.normal(loc=100, scale=40, size=n))
+    return X, y
+
+
+@pytest.mark.parametrize("name", ["random_forest", "gradient_boosting"])
+def test_tree_models_fit_predict_non_negative(cfg, name):
+    X, y = _tree_feature_frame()
+    # Small, fast params for the test; real defaults live in models.yaml.
+    params = {"n_estimators": 20} if name == "random_forest" else {"n_estimators": 20}
+    model = get_model(name, cfg, params).fit(X, y)
+    preds = model.predict(X)
+    assert len(preds) == len(X)
+    assert (preds >= 0).all()
+
+
+@pytest.mark.parametrize("name", ["random_forest", "gradient_boosting"])
+def test_tree_models_inverse_clips(cfg, name):
+    # Trees also use the clipped from_log1p inverse for the non-negativity
+    # contract.
+    assert get_model(name, cfg).inverse_func is from_log1p
+
+
+def test_params_override_reaches_estimator(cfg):
+    # A hyperparameter passed via params must land on the underlying model.
+    model = get_model("random_forest", cfg, {"n_estimators": 7})
+    assert model.regressor.n_estimators == 7
