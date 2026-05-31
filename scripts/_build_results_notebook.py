@@ -30,7 +30,7 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 
-from bike_sharing.config import load_config
+from bike_sharing.config import load_config, load_models_config
 from bike_sharing.data import load_raw_train
 from bike_sharing.features import build_features
 from bike_sharing.models import get_model
@@ -45,6 +45,7 @@ while not (PROJECT_ROOT / "config" / "config.yaml").exists():
     PROJECT_ROOT = PROJECT_ROOT.parent
 
 CFG = load_config(PROJECT_ROOT / "config" / "config.yaml")
+MODEL_PARAMS = load_models_config(PROJECT_ROOT / "config" / "models.yaml")
 REPORTS_DIR = Path(CFG["paths"]["reports_dir"])
 FIG_DIR = REPORTS_DIR / "figures"
 FIG_DIR.mkdir(parents=True, exist_ok=True)
@@ -86,7 +87,12 @@ dt = train[CFG["datetime_col"]]
 X = train.drop(columns=["count", CFG["datetime_col"]])
 
 tr_idx, ho_idx = day_of_month_holdout_split(dt)
-best = get_model(best_name, CFG).fit(X.iloc[tr_idx], y[tr_idx])
+# Use the same config/models.yaml hyperparameters as the metrics table,
+# so this refit reproduces the leaderboard's holdout score rather than
+# training the factory defaults.
+best = get_model(best_name, CFG, MODEL_PARAMS.get(best_name, {})).fit(
+    X.iloc[tr_idx], y[tr_idx]
+)
 y_true = y[ho_idx]
 y_pred = best.predict(X.iloc[ho_idx])
 
