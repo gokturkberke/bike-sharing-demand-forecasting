@@ -58,12 +58,30 @@ def test_factory_rejects_unknown_name(cfg):
 
 
 def test_ridge_predicts_in_original_scale(cfg):
-    # The TransformedTargetRegressor must invert the log1p, so predictions
-    # come back on the original count scale (positive, large numbers).
+    # The Ridge ColumnTransformer expects the project's feature schema.
+    # Build the minimum frame it consumes; predictions should come back
+    # in the original count scale (positive, large), not log space.
     rng = np.random.default_rng(0)
-    X = pd.DataFrame(rng.normal(size=(200, 4)), columns=list("abcd"))
-    y = np.abs(rng.normal(loc=100, scale=30, size=200))
+    n = 200
+    X = pd.DataFrame(
+        {
+            "temp": rng.uniform(0, 40, size=n),
+            "atemp": rng.uniform(0, 45, size=n),
+            "humidity": rng.uniform(0, 100, size=n),
+            "windspeed": rng.uniform(0, 50, size=n),
+            "holiday": rng.integers(0, 2, size=n),
+            "workingday": rng.integers(0, 2, size=n),
+            "is_weekend": rng.integers(0, 2, size=n),
+            "hour_sin": rng.uniform(-1, 1, size=n),
+            "hour_cos": rng.uniform(-1, 1, size=n),
+            "month_sin": rng.uniform(-1, 1, size=n),
+            "month_cos": rng.uniform(-1, 1, size=n),
+            "season": rng.integers(1, 5, size=n),
+            "weather": rng.integers(1, 4, size=n),
+        }
+    )
+    y = np.abs(rng.normal(loc=100, scale=30, size=n))
     model = get_model("ridge", cfg).fit(X, y)
     preds = model.predict(X)
-    # Range sanity: should overlap the training target range, not log space.
+    assert (preds >= 0).all()
     assert preds.mean() > 10

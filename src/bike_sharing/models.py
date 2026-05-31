@@ -10,10 +10,28 @@ from typing import Any
 import numpy as np
 import pandas as pd
 from sklearn.base import BaseEstimator, RegressorMixin
-from sklearn.compose import TransformedTargetRegressor
+from sklearn.compose import ColumnTransformer, TransformedTargetRegressor
 from sklearn.linear_model import Ridge
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import OneHotEncoder, StandardScaler
+
+# Feature partitioning for the linear model. Raw ordinal time columns
+# (hour, month, dayofweek, year) are intentionally dropped: a linear
+# model treats them as monotone trends and extrapolates beyond the
+# training range (e.g., train month <= 5, validation month = 9). The
+# cyclic sin/cos encodings represent the same information in a
+# scale-bounded way. Tree models (Phase 5) will use the raw ints.
+LINEAR_NUMERIC_COLUMNS = ["temp", "atemp", "humidity", "windspeed"]
+LINEAR_PASSTHROUGH_COLUMNS = [
+    "holiday",
+    "workingday",
+    "is_weekend",
+    "hour_sin",
+    "hour_cos",
+    "month_sin",
+    "month_cos",
+]
+LINEAR_ONE_HOT_COLUMNS = ["season", "weather"]
 
 
 class MeanBaseline(BaseEstimator, RegressorMixin):
@@ -63,11 +81,28 @@ class HourlyMeanBaseline(BaseEstimator, RegressorMixin):
 
 
 def _build_ridge(cfg: dict[str, Any]) -> TransformedTargetRegressor:
-    """Standard-scaler + Ridge over a log1p-transformed target."""
+    """ColumnTransformer + Ridge over a log1p-transformed target.
+
+    The ColumnTransformer drops raw ordinal time columns (see module
+    constants) so Ridge cannot extrapolate them. One-hots ``season`` and
+    ``weather`` to avoid imposing a meaningless ordinal scale.
+    """
     seed = int(cfg.get("seed", 42))
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ("num", StandardScaler(), LINEAR_NUMERIC_COLUMNS),
+            ("pass", "passthrough", LINEAR_PASSTHROUGH_COLUMNS),
+            (
+                "oh",
+                OneHotEncoder(handle_unknown="ignore", sparse_output=False),
+                LINEAR_ONE_HOT_COLUMNS,
+            ),
+        ],
+        remainder="drop",
+    )
     inner = Pipeline(
         [
-            ("scaler", StandardScaler()),
+            ("pre", preprocessor),
             ("ridge", Ridge(alpha=1.0, random_state=seed)),
         ]
     )

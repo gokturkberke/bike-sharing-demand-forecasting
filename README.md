@@ -21,7 +21,7 @@ Predict the hourly bike rental `count` from temporal, seasonal, and weather-rela
 │   └── processed/ # Feature-engineered parquet files
 ├── docs/          # Project proposal and notes
 ├── notebooks/     # EDA and experimentation notebooks
-├── src/bike_sharing/   # Reusable package; current: config, data, preprocessing, features (models, train, evaluate, predict added in later phases)
+├── src/bike_sharing/   # Reusable package; current: config, data, preprocessing, features, evaluate, models, train (predict added in later phases)
 ├── scripts/       # Thin orchestrators that call into src/
 ├── tests/         # Unit tests (including leakage guard)
 ├── models/        # Saved trained models (gitignored)
@@ -80,11 +80,11 @@ python scripts/generate_submission.py --model xgb
 
 | Model | RMSLE | RMSE | MAE | R² |
 |---|---|---|---|---|
-| Mean baseline | — | — | — | — |
-| Hourly-mean baseline | — | — | — | — |
-| Ridge (log1p) | — | — | — | — |
+| Mean baseline | 1.402 | 196.4 | 149.3 | -0.21 |
+| Hourly-mean baseline | 0.739 | 143.0 | 99.3 | 0.35 |
+| Ridge (cyclic + log1p) | 0.987 | 168.9 | 115.2 | 0.11 |
 | Random Forest | — | — | — | — |
 | Gradient Boosting | — | — | — | — |
 | XGBoost | — | — | — | — |
 
-_Filled in after Phase 4 onward._
+Phase 4 CV (TimeSeriesSplit, n_splits=5). Ridge with first-harmonic cyclic features loses to the hour-of-day mean baseline; trees in Phase 5 and richer linear features (deferred to a Phase 4 review experiment) are expected to close the gap.
