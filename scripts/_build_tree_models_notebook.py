@@ -98,8 +98,8 @@ imp_df = pd.DataFrame(imp).sort_values("random_forest", ascending=True)
 
 fig, ax = plt.subplots(figsize=(9, 6))
 imp_df.plot(kind="barh", ax=ax)
-ax.set_title("Tree feature importances")
-ax.set_xlabel("importance (fraction of variance explained)")
+ax.set_title("Tree feature importances (impurity-based, normalized)")
+ax.set_xlabel("impurity-based importance (normalized; sums to 1)")
 ax.set_ylabel("")
 ax.legend(title="")
 fig.tight_layout()
@@ -136,10 +136,17 @@ CELLS = [
     new_markdown_cell(
         "## 2. Feature importances\n"
         "\n"
-        "Which inputs the trees actually rely on. This is the explanatory "
-        "payload: it lets us connect model behavior back to the project's "
-        "temporal and environmental questions rather than just reporting a "
-        "score."
+        "Which inputs the trees rely on, to connect model behavior back to "
+        "the project's temporal and environmental questions rather than "
+        "just reporting a score. These are impurity-based (mean impurity "
+        "decrease, normalized to sum to 1) — a quick diagnostic split "
+        "importance, not a causal measure: it is biased toward continuous "
+        "and high-cardinality features and can split correlated inputs "
+        "(e.g. `temp`/`atemp`, `hour` vs its cyclic encodings) arbitrarily "
+        "between them. For a stronger claim in the Phase 7 report, "
+        "permutation importance on the day-of-month holdout would be the "
+        "next step; the broad temporal-vs-environmental tiering below is "
+        "robust enough for this stage."
     ),
     new_code_cell(IMPORTANCE_CODE),
     new_markdown_cell(
@@ -157,9 +164,14 @@ CELLS = [
         "`weather`, `season`) form the next tier: real but secondary. "
         "That is the environmental-impact narrative — weather modulates "
         "demand around the dominant daily rhythm rather than setting it.\n"
-        "- The two validation views agree on the ranking, and the "
-        "day-of-month holdout R² (~0.90) shows the trees generalize to "
-        "the later days of each month, the harder split.\n"
+        "- Both views agree that the two trees beat every baseline and "
+        "Ridge, but the top two are effectively tied and their order "
+        "depends on the validation view: Random Forest leads on the "
+        "day-of-month holdout (RMSLE 0.330 vs 0.334) while Gradient "
+        "Boosting leads on the chronological CV (0.471 vs 0.514). Treat "
+        "them as a near-tie, not a clear winner. The holdout R² (~0.90) "
+        "shows both generalize to the later days of each month, the "
+        "harder split.\n"
         "- Phase 6 will try XGBoost as an optional stronger model and "
         "produce the test-set `datetime,count` prediction artifact; "
         "Phase 7 consolidates these results and interpretations into the "

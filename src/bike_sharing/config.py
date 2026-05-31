@@ -53,7 +53,14 @@ def load_models_config(path: str | Path) -> dict[str, Any]:
             f"models config must be a mapping of model -> params; "
             f"got {type(loaded).__name__}."
         )
-    return loaded or {}
+    loaded = loaded or {}
+    bad = [k for k, v in loaded.items() if not isinstance(v, dict)]
+    if bad:
+        raise ValueError(
+            f"models config entries must be param mappings; "
+            f"these are not dicts: {bad}."
+        )
+    return loaded
 
 
 def _validate(cfg: Any) -> None:

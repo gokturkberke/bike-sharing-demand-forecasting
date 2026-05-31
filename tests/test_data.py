@@ -133,6 +133,13 @@ def test_load_models_config_missing_file_raises(tmp_path):
         load_models_config(tmp_path / "nope.yaml")
 
 
+def test_load_models_config_non_dict_entry_raises(tmp_path):
+    bad = tmp_path / "bad_models.yaml"
+    bad.write_text("ridge: 1.0\n")  # should be a mapping, not a scalar
+    with pytest.raises(ValueError, match="param mappings"):
+        load_models_config(bad)
+
+
 def test_cv_without_n_splits_raises_error(tmp_path):
     all_paths = "\n".join(f"  {p}: data/{p}" for p in REQUIRED_PATHS)
     bad = tmp_path / "cv_no_nsplits.yaml"
