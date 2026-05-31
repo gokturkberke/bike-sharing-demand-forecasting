@@ -72,8 +72,8 @@ python scripts/prepare_data.py
 python scripts/train_model.py --model ridge
 python scripts/train_model.py --model random_forest
 python scripts/train_model.py --model gradient_boosting
-python scripts/train_model.py --model xgb            # Phase 6
-python scripts/generate_submission.py --model xgb    # Phase 6: writes a datetime,count prediction artifact
+python scripts/train_model.py --model xgboost            # Phase 6
+python scripts/generate_submission.py --model xgboost    # Phase 6: writes a datetime,count prediction artifact
 ```
 
 ## Results
