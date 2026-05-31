@@ -59,9 +59,18 @@ def test_factory_known_names_return_estimators(cfg):
         assert hasattr(model, "predict")
 
 
+def test_xgboost_factory_returns_estimator(cfg):
+    # xgboost is an optional dependency; skip cleanly if not installed.
+    pytest.importorskip("xgboost")
+    model = get_model("xgboost", cfg)
+    assert hasattr(model, "fit")
+    assert hasattr(model, "predict")
+    assert model.inverse_func is from_log1p
+
+
 def test_factory_rejects_unknown_name(cfg):
     with pytest.raises(ValueError, match="Unknown model"):
-        get_model("xgboost", cfg)
+        get_model("lightgbm", cfg)
 
 
 def test_ridge_predicts_in_original_scale(cfg):

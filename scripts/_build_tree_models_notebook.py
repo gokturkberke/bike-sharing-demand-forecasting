@@ -90,8 +90,11 @@ train_cols = pd.read_parquet(
 ).drop(columns=[CFG["target"], CFG["datetime_col"]]).columns.tolist()
 
 imp = {}
-for name in ("random_forest", "gradient_boosting"):
-    model = joblib.load(MODELS_DIR / f"{name}.joblib")
+for name in ("random_forest", "gradient_boosting", "xgboost"):
+    path = MODELS_DIR / f"{name}.joblib"
+    if not path.exists():
+        continue
+    model = joblib.load(path)
     imp[name] = pd.Series(model.regressor_.feature_importances_, index=train_cols)
 
 imp_df = pd.DataFrame(imp).sort_values("random_forest", ascending=True)
@@ -111,16 +114,18 @@ imp_df.sort_values("random_forest", ascending=False).round(3)
 
 CELLS = [
     new_markdown_cell(
-        "# Phase 5 — Tree models (Random Forest, Gradient Boosting)\n"
+        "# Tree models (Random Forest, Gradient Boosting, XGBoost)\n"
         "\n"
-        "Adds two non-linear models to the comparison. Unlike Ridge, trees "
-        "are scale-invariant, so they use the **full** feature set "
-        "including the raw ordinal time columns (`hour`, `month`, "
-        "`dayofweek`, `year`) that the linear pipeline had to drop. Both "
-        "are trained on `log1p(count)` with the clipped inverse, so "
-        "predictions stay non-negative. Hyperparameters live in "
-        "`config/models.yaml`; metrics come from `reports/metrics.json`. "
-        "This notebook is diagnostic, not part of the runtime pipeline."
+        "Adds the non-linear models to the comparison (Random Forest and "
+        "Gradient Boosting from Phase 5; XGBoost from Phase 6). Unlike "
+        "Ridge, trees are scale-invariant, so they use the **full** "
+        "feature set including the raw ordinal time columns (`hour`, "
+        "`month`, `dayofweek`, `year`) that the linear pipeline had to "
+        "drop. All are trained on `log1p(count)` with the clipped "
+        "inverse, so predictions stay non-negative. Hyperparameters live "
+        "in `config/models.yaml`; metrics come from "
+        "`reports/metrics.json`. This notebook is diagnostic, not part of "
+        "the runtime pipeline."
     ),
     new_markdown_cell("## Setup"),
     new_code_cell(SETUP_CODE),
@@ -152,10 +157,12 @@ CELLS = [
     new_markdown_cell(
         "## Findings (interpretation for the report)\n"
         "\n"
-        "- Both trees decisively beat the baselines and Ridge on every "
-        "metric and both validation views. Capturing the `hour × "
+        "- All three tree models decisively beat the baselines and Ridge "
+        "on every metric and both validation views. Capturing the `hour × "
         "workingday` interaction non-linearly is exactly what the linear "
-        "model could not do with first-harmonic cyclic features.\n"
+        "model could not do with first-harmonic cyclic features. XGBoost "
+        "is the strongest (day-of-month holdout RMSLE 0.31, R² 0.94), "
+        "narrowly ahead of Random Forest and Gradient Boosting.\n"
         "- Feature importance is dominated by the **temporal** signal — "
         "`hour` (and its cyclic encodings) plus `workingday`/`year` — "
         "confirming the EDA story that time-of-day drives demand. This "
@@ -164,20 +171,20 @@ CELLS = [
         "`weather`, `season`) form the next tier: real but secondary. "
         "That is the environmental-impact narrative — weather modulates "
         "demand around the dominant daily rhythm rather than setting it.\n"
-        "- Both views agree that the two trees beat every baseline and "
-        "Ridge, but the top two are effectively tied and their order "
-        "depends on the validation view: Random Forest leads on the "
-        "day-of-month holdout (RMSLE 0.330 vs 0.334) while Gradient "
-        "Boosting leads on the chronological CV (0.471 vs 0.514). Treat "
-        "them as a near-tie, not a clear winner. The holdout R² (~0.90) "
-        "shows both generalize to the later days of each month, the "
-        "harder split.\n"
-        "- Phase 6 will try XGBoost as an optional stronger model and "
-        "produce the test-set `datetime,count` prediction artifact; "
-        "Phase 7 consolidates these results and interpretations into the "
-        "written report. Any hyperparameter tuning beyond the current "
-        "`config/models.yaml` defaults would be a `docs/experiments/` "
-        "plan, per AGENTS.md §7."
+        "- Among the trees the gaps are small. XGBoost edges ahead on "
+        "both views (holdout RMSLE 0.31, CV 0.45); Random Forest and "
+        "Gradient Boosting are a near-tie behind it and even swap order "
+        "between views (RF leads the holdout 0.330 vs 0.334, GB leads the "
+        "CV 0.471 vs 0.514). Treat the three as close rather than reading "
+        "a decisive winner from one metric. The holdout R² (~0.90+) shows "
+        "all three generalize to the later days of each month, the harder "
+        "split.\n"
+        "- The persisted XGBoost model produces the test-set "
+        "`datetime,count` prediction artifact via "
+        "`scripts/generate_submission.py`. Phase 7 consolidates these "
+        "results and interpretations into the written report. Any "
+        "hyperparameter tuning beyond the current `config/models.yaml` "
+        "defaults would be a `docs/experiments/` plan, per AGENTS.md §7."
     ),
 ]
 

@@ -148,12 +148,35 @@ def _build_gradient_boosting(
     return _log_target(model)
 
 
+def _build_xgboost(
+    cfg: dict[str, Any], params: dict[str, Any]
+) -> TransformedTargetRegressor:
+    """XGBoost over a log1p target, using the full feature set.
+
+    xgboost is imported lazily so it stays an optional dependency: the
+    baselines, Ridge, and the scikit-learn trees all work without it
+    installed (AGENTS.md s1 lists XGBoost as a later candidate, not an
+    initial requirement).
+    """
+    try:
+        from xgboost import XGBRegressor
+    except ImportError as exc:  # pragma: no cover - exercised only when absent
+        raise ImportError(
+            "xgboost is not installed. Run `pip install -r requirements.txt` "
+            "(or `pip install xgboost`) to use the 'xgboost' model."
+        ) from exc
+    seed = int(cfg.get("seed", 42))
+    model = XGBRegressor(random_state=seed, **params)
+    return _log_target(model)
+
+
 MODEL_FACTORIES = {
     "mean_baseline": lambda cfg, params: MeanBaseline(),
     "hourly_mean_baseline": lambda cfg, params: HourlyMeanBaseline(),
     "ridge": _build_ridge,
     "random_forest": _build_random_forest,
     "gradient_boosting": _build_gradient_boosting,
+    "xgboost": _build_xgboost,
 }
 
 

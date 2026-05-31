@@ -21,7 +21,7 @@ Predict the hourly bike rental `count` from temporal, seasonal, and weather-rela
 │   └── processed/ # Feature-engineered parquet files
 ├── docs/          # Project proposal and notes
 ├── notebooks/     # EDA and experimentation notebooks
-├── src/bike_sharing/   # Reusable package; current: config, data, preprocessing, features, evaluate, models, train (predict added in later phases)
+├── src/bike_sharing/   # Reusable package: config, data, preprocessing, features, evaluate, models, train, predict
 ├── scripts/       # Thin orchestrators that call into src/
 ├── tests/         # Unit tests (including leakage guard)
 ├── models/        # Saved trained models (gitignored)
@@ -89,6 +89,6 @@ Day-of-month holdout (all four metrics):
 | Ridge (cyclic + log1p) | 0.906 | 162.2 | 106.2 | 0.21 | 0.987 |
 | Random Forest | 0.330 | 51.9 | 30.4 | 0.92 | 0.514 |
 | Gradient Boosting | 0.334 | 59.0 | 36.5 | 0.90 | 0.471 |
-| XGBoost | — | — | — | — | — |
+| XGBoost | 0.309 | 46.5 | 27.6 | 0.94 | 0.447 |
 
-The tree models change the picture: Random Forest and Gradient Boosting beat every baseline and Ridge on all metrics and both validation views (holdout R² ~0.90), because they capture the `hour × workingday` interaction non-linearly using the full feature set that the linear model had to drop. Ridge still trails the simple hour-of-day average — first-harmonic cyclic features cannot represent the bimodal commuter pattern. Feature importance is dominated by the temporal signal (hour, workingday, year), with environmental inputs (temperature, humidity, weather, season) as a real but secondary tier. The consolidated results-and-interpretation report (Phase 7) ties these numbers back to the environmental and temporal questions in the proposal.
+The tree models change the picture: Random Forest, Gradient Boosting, and XGBoost beat every baseline and Ridge on all metrics and both validation views (holdout R² ~0.90+), because they capture the `hour × workingday` interaction non-linearly using the full feature set that the linear model had to drop. XGBoost is the strongest (holdout RMSLE 0.31, R² 0.94), with the three trees close to each other. Ridge still trails the simple hour-of-day average — first-harmonic cyclic features cannot represent the bimodal commuter pattern. Feature importance is dominated by the temporal signal (hour, workingday, year), with environmental inputs (temperature, humidity, weather, season) as a real but secondary tier. The test-set `datetime,count` prediction artifact is produced from a trained model by `scripts/generate_submission.py`. The consolidated results-and-interpretation report (Phase 7) ties these numbers back to the environmental and temporal questions in the proposal.
