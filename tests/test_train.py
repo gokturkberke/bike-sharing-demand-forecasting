@@ -11,9 +11,9 @@ from bike_sharing.features import build_features
 from bike_sharing.models import get_model
 from bike_sharing.preprocessing import drop_leakage_columns
 from bike_sharing.train import (
+    day_of_month_holdout_split,
     evaluate_holdout,
     fit_and_cv,
-    kaggle_like_holdout_split,
 )
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -59,17 +59,17 @@ def test_hourly_mean_beats_global_mean(cfg, featured):
     assert hourly_out["mean"]["rmsle"] < global_out["mean"]["rmsle"]
 
 
-def test_kaggle_like_holdout_split_partitions_by_day(cfg, featured):
-    from bike_sharing.train import KAGGLE_HOLDOUT_DAY_THRESHOLD
+def test_day_of_month_holdout_split_partitions_by_day(cfg, featured):
+    from bike_sharing.train import HOLDOUT_DAY_THRESHOLD
 
     _, _, dt = featured
-    train_idx, holdout_idx = kaggle_like_holdout_split(dt)
+    train_idx, holdout_idx = day_of_month_holdout_split(dt)
     # No overlap, full coverage.
     assert set(train_idx).isdisjoint(holdout_idx)
     assert len(train_idx) + len(holdout_idx) == len(dt)
     # Train holds the earlier day-of-month values, holdout the later ones.
-    assert dt.iloc[train_idx].dt.day.max() < KAGGLE_HOLDOUT_DAY_THRESHOLD
-    assert dt.iloc[holdout_idx].dt.day.min() >= KAGGLE_HOLDOUT_DAY_THRESHOLD
+    assert dt.iloc[train_idx].dt.day.max() < HOLDOUT_DAY_THRESHOLD
+    assert dt.iloc[holdout_idx].dt.day.min() >= HOLDOUT_DAY_THRESHOLD
 
 
 def test_evaluate_holdout_structure_and_counts(cfg, featured):
@@ -83,7 +83,7 @@ def test_evaluate_holdout_structure_and_counts(cfg, featured):
 def test_ridge_holdout_predictions_are_non_negative(cfg, featured):
     # The clipped inverse must hold on a genuine out-of-sample split.
     X, y, dt = featured
-    train_idx, holdout_idx = kaggle_like_holdout_split(dt)
+    train_idx, holdout_idx = day_of_month_holdout_split(dt)
     model = get_model("ridge", cfg).fit(X.iloc[train_idx], y[train_idx])
     preds = model.predict(X.iloc[holdout_idx])
     assert (preds >= 0).all()

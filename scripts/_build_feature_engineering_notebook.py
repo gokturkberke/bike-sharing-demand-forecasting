@@ -145,7 +145,7 @@ CELLS = [
         "\n"
         "Confirms that nine new columns are added with sensible dtypes and "
         "ranges. `datetime` is preserved so the same pipeline can later "
-        "build a submission for the test set."
+        "be applied to the test set and label its predictions."
     ),
     new_code_cell(BUILD_CODE),
     new_markdown_cell(
@@ -198,9 +198,9 @@ CELLS = [
         "`is_weekend` is weakly correlated because `workingday` already "
         "captures most weekend behavior.\n"
         "- `day` (day-of-month) is intentionally excluded from the "
-        "feature set: the Kaggle split puts days 1-19 in train and 20-31 "
-        "in test, so the feature would be out-of-distribution at test "
-        "time. The schema-contract test "
+        "feature set: the dataset's split puts days 1-19 in train and "
+        "20-31 in test, so the feature would be out-of-distribution at "
+        "test time. The schema-contract test "
         "`test_train_and_test_predictor_schemas_match` prevents this "
         "regression from reappearing."
     ),

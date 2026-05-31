@@ -6,8 +6,8 @@ transformation lives in ``preprocessing.to_log1p_target``. This module
 adds time-derived features and cyclic encodings only.
 
 The raw ``datetime`` column is preserved on the returned frame because
-AGENTS.md mandates it for submission output. Models drop it from ``X``
-at fit time, not here.
+it is needed to label the test-set prediction artifact. Models drop it
+from ``X`` at fit time, not here.
 """
 
 from typing import Any

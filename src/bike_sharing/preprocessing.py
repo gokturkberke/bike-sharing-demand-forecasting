@@ -7,7 +7,7 @@ Owns the two contracts that downstream modules rely on:
    for the direct-count modeling path.
 2. Target transformation: training is done on ``log1p(count)`` and
    predictions are inverted via ``expm1`` and clipped at zero so a
-   submission can never carry negative demand.
+   prediction artifact can never carry negative demand.
 """
 
 from typing import Any
@@ -37,6 +37,6 @@ def from_log1p(y_log: np.ndarray) -> np.ndarray:
     Models that fit in log space can produce slightly negative outputs;
     when inverted with ``expm1`` these become negative demand, which is
     nonsensical for hourly bike counts. Per AGENTS.md the prediction
-    pipeline clips at zero before the submission stage.
+    pipeline clips at zero before the prediction artifact is written.
     """
     return np.clip(np.expm1(np.asarray(y_log)), a_min=0.0, a_max=None)

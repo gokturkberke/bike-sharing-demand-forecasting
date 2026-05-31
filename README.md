@@ -4,7 +4,7 @@ Hourly bike rental demand forecasting using the [Kaggle Bike Sharing Demand](htt
 
 ## Goal
 
-Predict the hourly bike rental `count` from temporal, seasonal, and weather-related features.
+Predict the hourly bike rental `count` from temporal, seasonal, and weather-related features. This is a course project: the emphasis is exploratory analysis, feature engineering, modeling, validation, and explainable reporting — not a leaderboard score. Results are reported with RMSLE, RMSE, MAE, and R² together and interpreted jointly.
 
 ## Data leakage warning
 
@@ -25,7 +25,7 @@ Predict the hourly bike rental `count` from temporal, seasonal, and weather-rela
 ├── scripts/       # Thin orchestrators that call into src/
 ├── tests/         # Unit tests (including leakage guard)
 ├── models/        # Saved trained models (gitignored)
-└── reports/       # Figures, metrics, and Kaggle submissions
+└── reports/       # Figures, metrics, and test-set prediction artifacts
 ```
 
 Layer responsibilities (notebooks vs `src/` vs `scripts/` vs `config/` vs `reports/`) and the rules that govern when each layer accepts new code are documented in AGENTS.md §2 and §6.
@@ -73,20 +73,22 @@ python scripts/train_model.py --model ridge
 python scripts/train_model.py --model rf
 python scripts/train_model.py --model xgb
 python scripts/evaluate_model.py
-python scripts/generate_submission.py --model xgb
+python scripts/generate_submission.py --model xgb   # writes a datetime,count prediction artifact
 ```
 
 ## Results
 
-RMSLE is the primary metric. Each model is validated two leakage-safe ways: chronological `TimeSeriesSplit(5)` (mean over folds) and a Kaggle-like day-of-month holdout (train on days 1-15, validate on the latest labeled days 16-19 — the axis along which the competition's train/test sets differ).
+All four metrics (RMSLE, RMSE, MAE, R²) are reported together and read jointly; none is treated as the single deciding score. RMSLE is shown because the target is right-skewed. Each model is validated two leakage-safe ways: chronological `TimeSeriesSplit(5)` (mean over folds) and a day-of-month holdout (train on days 1-15, validate on the latest labeled days 16-19), which mirrors the dataset's own day-of-month train/test structure and is the more realistic generalization estimate.
 
-| Model | CV RMSLE | Holdout RMSLE | Holdout RMSE | Holdout MAE | Holdout R² |
+Day-of-month holdout (all four metrics):
+
+| Model | RMSLE | RMSE | MAE | R² | CV RMSLE |
 |---|---|---|---|---|---|
-| Mean baseline | 1.402 | 1.531 | 183.1 | 142.6 | -0.00 |
-| Hourly-mean baseline | 0.739 | 0.755 | 125.9 | 86.1 | 0.53 |
-| Ridge (cyclic + log1p) | 0.987 | 0.906 | 162.2 | 106.2 | 0.21 |
+| Mean baseline | 1.531 | 183.1 | 142.6 | -0.00 | 1.402 |
+| Hourly-mean baseline | 0.755 | 125.9 | 86.1 | 0.53 | 0.739 |
+| Ridge (cyclic + log1p) | 0.906 | 162.2 | 106.2 | 0.21 | 0.987 |
 | Random Forest | — | — | — | — | — |
 | Gradient Boosting | — | — | — | — | — |
 | XGBoost | — | — | — | — | — |
 
-Both views rank hourly-mean > ridge > mean. Ridge with first-harmonic cyclic features cannot represent the bimodal commuter pattern, so it loses to the hour-of-day baseline; trees in Phase 5 and richer linear features (a Phase 4 review experiment) are expected to close the gap.
+Both validation views agree: hourly-mean > ridge > mean. Ridge with first-harmonic cyclic features cannot represent the bimodal commuter pattern, so it trails the simple hour-of-day average; trees (Phase 5) and richer linear features are expected to close the gap. The consolidated results-and-interpretation report (Phase 7) ties these numbers back to the environmental and temporal questions in the proposal.

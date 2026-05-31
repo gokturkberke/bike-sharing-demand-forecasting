@@ -2,10 +2,10 @@
 
 Thin orchestrator. Loads the processed train parquet (produced by
 ``prepare_data.py``), runs two leakage-safe validations - a chronological
-``TimeSeriesSplit`` (``train.fit_and_cv``) and the Kaggle-like
-day-of-month holdout (``train.evaluate_holdout``) - fits the model on the
-full train set, writes ``models/<name>.joblib``, and updates
-``reports/metrics.json`` with this run's entry.
+``TimeSeriesSplit`` (``train.fit_and_cv``) and the day-of-month holdout
+(``train.evaluate_holdout``) - fits the model on the full train set,
+writes ``models/<name>.joblib``, and updates ``reports/metrics.json``
+with this run's entry.
 
 Run from the project root, after ``prepare_data.py``:
 
@@ -63,15 +63,15 @@ def main(model_name: str, config_path: Path = DEFAULT_CONFIG_PATH) -> None:
 
     metrics_path = reports_dir / "metrics.json"
     metrics = _load_metrics(metrics_path)
-    metrics[model_name] = {"cv": cv_summary, "kaggle_holdout": holdout_summary}
+    metrics[model_name] = {"cv": cv_summary, "day_of_month_holdout": holdout_summary}
     _save_metrics(metrics_path, metrics)
 
     mean = cv_summary["mean"]
     holdout = holdout_summary["metrics"]
     print(f"model={model_name}")
-    print(f"  cv mean:        rmsle={mean['rmsle']:.4f} rmse={mean['rmse']:.2f} "
+    print(f"  cv mean:             rmsle={mean['rmsle']:.4f} rmse={mean['rmse']:.2f} "
           f"mae={mean['mae']:.2f} r2={mean['r2']:.3f}")
-    print(f"  kaggle holdout: rmsle={holdout['rmsle']:.4f} rmse={holdout['rmse']:.2f} "
+    print(f"  day-of-month holdout: rmsle={holdout['rmsle']:.4f} rmse={holdout['rmse']:.2f} "
           f"mae={holdout['mae']:.2f} r2={holdout['r2']:.3f}")
     print(f"  saved estimator: {model_path.relative_to(PROJECT_ROOT)}")
     print(f"  updated metrics: {metrics_path.relative_to(PROJECT_ROOT)}")

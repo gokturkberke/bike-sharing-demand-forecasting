@@ -197,8 +197,8 @@ CELLS = [
         "hours, a long tail of high-demand hours. Applying `log1p` reduces "
         "the strong right skew (skew ≈ -0.85) — the result is not perfectly "
         "symmetric, but it is much friendlier for squared-error losses and "
-        "aligns with Kaggle's RMSLE evaluation. The modeling pipeline trains "
-        "on `log1p(count)` and inverts with `expm1`."
+        "motivates reporting RMSLE alongside RMSE/MAE/R². The modeling "
+        "pipeline trains on `log1p(count)` and inverts with `expm1`."
     ),
     new_code_cell(TARGET_DIST_CODE),
     new_markdown_cell(
@@ -246,8 +246,8 @@ CELLS = [
         "## Findings (feed into Phase 3 feature engineering)\n"
         "\n"
         "- `count` is right-skewed (skew ≈ +1.24); `log1p` reduces the skew "
-        "(to ≈ -0.85) and aligns with RMSLE evaluation, so train on "
-        "`log1p(count)`.\n"
+        "(to ≈ -0.85) and motivates reporting RMSLE alongside the other "
+        "metrics, so train on `log1p(count)`.\n"
         "- Hourly demand shows a strong working-day vs non-working-day split; "
         "encode `hour` explicitly and consider a cyclic (sin/cos) variant.\n"
         "- Demand follows a clear seasonal arc; encode `month` and `year`.\n"

@@ -5,9 +5,8 @@ Two complementary validation views, both leakage-safe:
 - ``fit_and_cv``: a chronological ``TimeSeriesSplit`` that simulates
   forecasting future months from past months.
 - ``evaluate_holdout``: a single day-of-month split that mirrors the
-  axis along which the competition's train/test sets actually differ.
-  This is the more representative score for leaderboard-oriented model
-  selection (see the threshold note below).
+  axis along which the dataset's own train/test sets differ. It is the
+  more realistic generalization estimate (see the threshold note below).
 
 The orchestrator (``scripts/train_model.py``) records both.
 """
@@ -21,16 +20,15 @@ from sklearn.model_selection import TimeSeriesSplit
 
 from bike_sharing.evaluate import report
 
-# The Kaggle Bike Sharing Demand split is by day-of-month: training rows
-# are days 1-19 of every month, test rows are day 20 onward. The labeled
-# data we have (train.csv) therefore stops at day 19, so a literal
-# "days >= 20" holdout would be empty. The closest leakage-safe local
-# analog is to hold out the *latest labeled days* within each month
-# (train on days 1-15, validate on days 16-19). This isolates the same
-# day-of-month extrapolation the leaderboard tests, which is a different
-# axis than the chronological month-over-month split that fit_and_cv
-# exercises.
-KAGGLE_HOLDOUT_DAY_THRESHOLD = 16
+# The dataset is split by day-of-month: the labeled training rows are
+# days 1-19 of every month, the unlabeled test rows are day 20 onward.
+# Because the labeled data stops at day 19, a literal "days >= 20"
+# holdout would be empty. The closest leakage-safe local analog is to
+# hold out the *latest labeled days* within each month (train on days
+# 1-15, validate on days 16-19). This isolates the same day-of-month
+# extrapolation the dataset's structure implies, a different axis than
+# the chronological month-over-month split that fit_and_cv exercises.
+HOLDOUT_DAY_THRESHOLD = 16
 
 
 def fit_and_cv(
@@ -77,20 +75,20 @@ def _summarize(
     }
 
 
-def kaggle_like_holdout_split(
+def day_of_month_holdout_split(
     datetime_series: pd.Series,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Return positional ``(train_idx, holdout_idx)`` for the day-of-month split.
 
-    Days below ``KAGGLE_HOLDOUT_DAY_THRESHOLD`` (1-15) go to train; the
-    latest labeled days (16-19) go to holdout. See the module constant
-    for why this is the closest local analog to the competition's
-    1-19/20+ boundary. Indices are positional (0-based) into the series.
+    Days below ``HOLDOUT_DAY_THRESHOLD`` (1-15) go to train; the latest
+    labeled days (16-19) go to holdout. See the module constant for why
+    this mirrors the dataset's own 1-19/20+ structure. Indices are
+    positional (0-based) into the series.
     """
     day = np.asarray(datetime_series.dt.day)
     positions = np.arange(len(day))
-    train_idx = positions[day < KAGGLE_HOLDOUT_DAY_THRESHOLD]
-    holdout_idx = positions[day >= KAGGLE_HOLDOUT_DAY_THRESHOLD]
+    train_idx = positions[day < HOLDOUT_DAY_THRESHOLD]
+    holdout_idx = positions[day >= HOLDOUT_DAY_THRESHOLD]
     return train_idx, holdout_idx
 
 
@@ -101,12 +99,12 @@ def evaluate_holdout(
     datetime_series: pd.Series,
     cfg: dict[str, Any],
 ) -> dict[str, Any]:
-    """Fit on the Kaggle-like train days and score on the holdout days.
+    """Fit on the early day-of-month rows and score on the held-out days.
 
     Returns a report dict plus the train/holdout row counts. The input
     ``model`` is cloned, so it is left unfit.
     """
-    train_idx, holdout_idx = kaggle_like_holdout_split(datetime_series)
+    train_idx, holdout_idx = day_of_month_holdout_split(datetime_series)
     y_arr = np.asarray(y)
     holdout_model = clone(model)
     holdout_model.fit(X.iloc[train_idx], y_arr[train_idx])

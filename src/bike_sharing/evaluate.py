@@ -1,10 +1,12 @@
 """Evaluation metrics for Bike Sharing Demand models.
 
-All metrics are computed on the original ``count`` scale. RMSLE is
-defined to match Kaggle's competition rule: it applies ``log1p`` to both
-the predicted and the true value, so predictions are clipped at zero
-first (negative hourly demand is undefined and ``log1p`` of a negative
-number is NaN).
+All four metrics (RMSLE, RMSE, MAE, R2) are computed on the original
+``count`` scale and reported together; no single one is decisive. RMSLE
+is informative because the target is right-skewed and it penalizes
+under-prediction relative to over-prediction; it applies ``log1p`` to
+both the predicted and the true value, so predictions are clipped at
+zero first (negative hourly demand is undefined and ``log1p`` of a
+negative number is NaN).
 """
 
 from typing import Any
@@ -41,8 +43,9 @@ def rmsle(y_true: np.ndarray, y_pred: np.ndarray) -> float:
 def report(y_true: np.ndarray, y_pred: np.ndarray) -> dict[str, float]:
     """Compute the project's full metric set in one call.
 
-    Returns a flat dict with keys ``rmsle`` (primary), ``rmse``, ``mae``,
-    ``r2``. RMSLE clips predictions at zero internally.
+    Returns a flat dict with keys ``rmsle``, ``rmse``, ``mae``, ``r2``,
+    all on the original count scale and meant to be read together. RMSLE
+    clips predictions at zero internally.
     """
     return {
         "rmsle": rmsle(y_true, y_pred),

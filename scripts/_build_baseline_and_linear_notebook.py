@@ -75,12 +75,12 @@ plt.show()
 METRICS_TABLE_CODE = """\
 # Load the metrics table written by scripts/train_model.py and compare.
 # Each model entry has two validation views: chronological CV ("cv") and
-# the Kaggle-like day-of-month holdout ("kaggle_holdout").
+# the day-of-month holdout ("day_of_month_holdout").
 metrics = json.loads(METRICS_PATH.read_text())
 rows = []
 for name, summary in metrics.items():
     cv = summary["cv"]["mean"]
-    holdout = summary["kaggle_holdout"]["metrics"]
+    holdout = summary["day_of_month_holdout"]["metrics"]
     rows.append({
         "model": name,
         "cv_rmsle": cv["rmsle"],
@@ -118,12 +118,12 @@ plt.show()
 """
 
 RESIDUAL_CODE = """\
-# Out-of-sample residuals: fit Ridge on the Kaggle-like train days
+# Out-of-sample residuals: fit Ridge on the early day-of-month rows
 # (1-15) and compute residuals on the held-out days (16-19) it never
 # saw. This is a genuine generalization view, not in-sample diagnostics.
-from bike_sharing.train import kaggle_like_holdout_split
+from bike_sharing.train import day_of_month_holdout_split
 
-train_idx, holdout_idx = kaggle_like_holdout_split(datetime)
+train_idx, holdout_idx = day_of_month_holdout_split(datetime)
 ridge = get_model("ridge", CFG).fit(X.iloc[train_idx], y[train_idx])
 holdout_pred = ridge.predict(X.iloc[holdout_idx])
 
@@ -152,12 +152,13 @@ CELLS = [
         "hour-of-day mean) plus a Ridge regression with `log1p` target "
         "transformation. Each model is evaluated two ways: a "
         "chronological `TimeSeriesSplit(5)` (forecast future months) and "
-        "a Kaggle-like day-of-month holdout (train on days 1-15, validate "
-        "on the latest labeled days 16-19 — the axis along which the "
-        "competition's train/test sets actually differ). The metrics "
-        "tables and figures below are sourced from `reports/metrics.json` "
-        "produced by `scripts/train_model.py`. This notebook is "
-        "diagnostic, not part of the runtime pipeline."
+        "a day-of-month holdout (train on days 1-15, validate on the "
+        "latest labeled days 16-19), which mirrors the dataset's own "
+        "day-of-month train/test structure. All four metrics (RMSLE, "
+        "RMSE, MAE, R²) are reported together. The tables and figures "
+        "below are sourced from `reports/metrics.json` produced by "
+        "`scripts/train_model.py`. This notebook is diagnostic, not part "
+        "of the runtime pipeline."
     ),
     new_markdown_cell("## Setup and data load"),
     new_code_cell(SETUP_CODE),
@@ -172,15 +173,16 @@ CELLS = [
     ),
     new_code_cell(CV_FOLDS_CODE),
     new_markdown_cell(
-        "## 2. Metric comparison (CV vs Kaggle-like holdout)\n"
+        "## 2. Metric comparison (CV vs day-of-month holdout)\n"
         "\n"
-        "RMSLE is the primary score (it matches Kaggle's grading); RMSE, "
-        "MAE, R² are diagnostic. Both validation views are shown: "
-        "`cv_rmsle` is the mean over the five chronological folds, "
-        "`holdout_rmsle` is the single day-of-month holdout score. The "
-        "holdout is the more representative number for leaderboard model "
-        "selection because it matches the competition's day-of-month "
-        "extrapolation. Lower is better; table sorted by holdout RMSLE."
+        "All four metrics (RMSLE, RMSE, MAE, R²) are read together; none "
+        "is the single deciding score. RMSLE is shown because the target "
+        "is right-skewed. Both validation views appear: `cv_rmsle` is the "
+        "mean over the five chronological folds, `holdout_rmsle` is the "
+        "single day-of-month holdout score. The holdout is the more "
+        "realistic generalization estimate because it matches how the "
+        "dataset itself is split by day-of-month. Lower is better; table "
+        "sorted by holdout RMSLE."
     ),
     new_code_cell(METRICS_TABLE_CODE),
     new_markdown_cell(
@@ -222,10 +224,10 @@ CELLS = [
         "to hide.\n"
         "- Two validation views agree on the ranking, which is "
         "reassuring: the chronological CV (forecast future months) and "
-        "the day-of-month holdout (extrapolate later days, matching the "
-        "Kaggle split) both rank hourly-mean > ridge > mean. When they "
-        "disagree in later phases, trust the holdout for leaderboard "
-        "decisions.\n"
+        "the day-of-month holdout (extrapolate later days, mirroring the "
+        "dataset's own split) both rank hourly-mean > ridge > mean. When "
+        "they disagree in later phases, treat the day-of-month holdout as "
+        "the more realistic estimate.\n"
         "- The Ridge ColumnTransformer drops the raw ordinal time "
         "columns (`hour`, `month`, `dayofweek`, `year`); only cyclic "
         "encodings and one-hot `season`/`weather` are exposed to the "
@@ -238,7 +240,15 @@ CELLS = [
         "- Phase 4 review candidates: add `hour × workingday` interaction "
         "terms, second-harmonic Fourier features, hour one-hot, or "
         "polynomial expansion of cyclic features. Each goes into a "
-        "`docs/experiments/` plan file before code, per AGENTS.md §7."
+        "`docs/experiments/` plan file before code, per AGENTS.md §7.\n"
+        "- Interpretation for the report: the dominant demand signal is "
+        "*temporal* (hour-of-day, split by working vs non-working day), "
+        "which is why a trivial hour-of-day average is hard to beat. "
+        "Weather and seasonal (environmental) effects are secondary and "
+        "are where the linear model still adds value over the per-hour "
+        "mean. These results map directly onto the proposal's temporal "
+        "and environmental-impact questions and will be consolidated in "
+        "the Phase 7 results report."
     ),
 ]
 

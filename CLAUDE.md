@@ -9,8 +9,8 @@ The primary project behavior is:
 - Predict the hourly total rental `count`.
 - Produce report-ready visualizations for environmental impact and cyclical demand patterns.
 - Train and compare reproducible baseline, linear, tree-based, and boosting models as phases are implemented.
-- Evaluate forecasts primarily with RMSLE, while also reporting RMSE, MAE, and R2 where implemented.
-- Generate Kaggle-ready submissions with exactly `datetime,count` columns and one prediction for every test row.
+- Evaluate forecasts with RMSLE, RMSE, MAE, and R2 reported together and interpreted jointly; no single metric is decisive, though RMSLE is informative for the right-skewed target.
+- Produce a test-set prediction artifact with exactly `datetime,count` columns and one prediction for every test row (the dataset's sample format), as a project deliverable rather than a leaderboard submission.
 - Investigate the proposal's sequential-data objective through lag-feature experiments only when validation and test-time generation are leakage-safe.
 
 Forecasting inventory (planned production behavior as phases land):
@@ -19,14 +19,14 @@ Forecasting inventory (planned production behavior as phases land):
 - Tree models: scikit-learn Random Forest and Gradient Boosting candidates.
 - Boosting model: XGBoost as a later strong-model candidate, not an initial dependency requirement.
 - Feature engineering: timestamp-derived calendar features, working-day/holiday context, seasonal/weather inputs, and cyclic time encodings.
-- Submission generation: non-negative predictions written in Kaggle's required schema.
+- Prediction artifact: non-negative predictions written in the `datetime,count` schema.
 - Optional stretch strategy: separate `casual` and `registered` target models whose predictions are summed; neither target may be used as a feature for the other model or for a direct `count` model.
 
 Scope control is strict:
 - Do not use `casual` or `registered` as features for any model that predicts `count`; they sum exactly to the target and do not exist in `test.csv`.
 - Do not introduce `count(t-1)` or another target lag as an ordinary feature unless inference can construct it without true future targets and validation proves the same recursive behavior.
 - Do not add an application/API layer, remote service, external dataset, or automatic data downloader unless explicitly requested.
-- Do not broaden the project beyond the proposal's environmental, temporal, sequential-analysis, modeling, evaluation, and submission objectives unless explicitly requested.
+- Do not broaden the project beyond the proposal's environmental, temporal, sequential-analysis, modeling, evaluation, reporting, and prediction-artifact objectives unless explicitly requested.
 - Do not commit raw Kaggle CSV files, generated model artifacts, processed datasets, submission outputs, or machine-local environment files.
 - Preserve the phase-based implementation strategy: build a tested, understandable forecasting pipeline before optional stretch work.
 
@@ -41,7 +41,7 @@ Package and runtime truth:
 - Treat `requirements.txt`, `pyproject.toml`, and `README.md` as the most reliable runtime truth for execution decisions.
 
 Architecture and ownership:
-- The repository is currently at Phase 4: in addition to the Phase 1-3 deliverables (package scaffold, raw-data loading, configuration validation, leakage preprocessing, feature engineering producing `data/processed/{train,test}.parquet`, and the executed EDA + feature-engineering notebooks with eight tracked report figures), modeling is online. `src/bike_sharing/evaluate.py` computes RMSLE (primary), RMSE, MAE, R²; `src/bike_sharing/models.py` provides a factory for `mean_baseline`, `hourly_mean_baseline`, and `ridge` (the Ridge is a `ColumnTransformer + Ridge` wrapped in `TransformedTargetRegressor(log1p/expm1)`; it intentionally drops raw ordinal time columns and one-hots `season`/`weather` so the linear model cannot extrapolate); the Ridge target inversion is `from_log1p` (expm1 + clip-at-0), the project contract, so predictions can never be negative. `src/bike_sharing/train.py` provides two leakage-safe validation views: `fit_and_cv` (`TimeSeriesSplit(n_splits=cfg.cv.n_splits)`, rows sorted by datetime) and `evaluate_holdout` (a Kaggle-like day-of-month split via `kaggle_like_holdout_split` - train days 1-15, validate days 16-19, the closest local analog to the competition's 1-19/20+ boundary since labeled data stops at day 19). `cv` is a required config key validated in `config.py`. `scripts/train_model.py --model NAME` persists `models/{name}.joblib` and writes both views into `reports/metrics.json` under `{cv, kaggle_holdout}`. `notebooks/03_baseline_and_linear.ipynb` adds three figures (CV folds, per-fold RMSLE, Ridge out-of-sample residuals by hour). Tests add 22 contracts across `test_evaluate.py`, `test_models.py`, `test_train.py`. Current holdout RMSLE: `mean_baseline` 1.53, `ridge` 0.91, `hourly_mean_baseline` 0.75 - Ridge with first-harmonic cyclic features alone cannot capture the bimodal commuter pattern, leaving the hour-of-day baseline ahead until trees (Phase 5) or richer linear features (a Phase 4 review experiment) catch up.
+- This is a CMP4336 school project (not a leaderboard run); the emphasis is EDA, feature engineering, modeling, validation, and explainable reporting. The repository is currently at Phase 4: in addition to the Phase 1-3 deliverables (package scaffold, raw-data loading, configuration validation, leakage preprocessing, feature engineering producing `data/processed/{train,test}.parquet`, and the executed EDA + feature-engineering notebooks with eight tracked report figures), modeling is online. `src/bike_sharing/evaluate.py` computes RMSLE, RMSE, MAE, R² and reports them together (no single metric is primary); `src/bike_sharing/models.py` provides a factory for `mean_baseline`, `hourly_mean_baseline`, and `ridge` (the Ridge is a `ColumnTransformer + Ridge` wrapped in `TransformedTargetRegressor(log1p/expm1)`; it intentionally drops raw ordinal time columns and one-hots `season`/`weather` so the linear model cannot extrapolate); the Ridge target inversion is `from_log1p` (expm1 + clip-at-0), the project contract, so predictions can never be negative. `src/bike_sharing/train.py` provides two leakage-safe validation views: `fit_and_cv` (`TimeSeriesSplit(n_splits=cfg.cv.n_splits)`, rows sorted by datetime) and `evaluate_holdout` (a day-of-month split via `day_of_month_holdout_split` - train days 1-15, validate days 16-19, mirroring the dataset's own 1-19/20+ structure since labeled data stops at day 19). `cv` is a required config key validated in `config.py`. `scripts/train_model.py --model NAME` persists `models/{name}.joblib` and writes both views into `reports/metrics.json` under `{cv, day_of_month_holdout}`. `notebooks/03_baseline_and_linear.ipynb` adds three figures (CV folds, per-fold RMSLE, Ridge out-of-sample residuals by hour). Tests add 22 contracts across `test_evaluate.py`, `test_models.py`, `test_train.py`. Current day-of-month-holdout scores: `hourly_mean_baseline` is best (RMSLE 0.75, RMSE 125.9, MAE 86.1, R² 0.53), `ridge` next (RMSLE 0.91), `mean_baseline` worst (RMSLE 1.53) - Ridge with first-harmonic cyclic features alone cannot capture the bimodal commuter pattern, leaving the hour-of-day baseline ahead until trees (Phase 5) or richer linear features catch up.
 - `src/bike_sharing/` is the importable package for reusable project logic.
 - `config/config.yaml` owns paths, random seed, target name, excluded columns, and datetime configuration; feature flags may be added in later phases.
 - `config/models.yaml`, once added, owns model hyperparameters rather than embedding experimental settings in scripts.
@@ -52,16 +52,16 @@ Architecture and ownership:
 - `src/bike_sharing/models.py`, `train.py`, `evaluate.py`, and `predict.py`, once added, own estimator creation, fitting/validation, metrics, and prediction behavior.
 - `scripts/` contains thin command-line orchestrators only; business logic belongs in `src/bike_sharing/`.
 - `notebooks/` contains analysis and presentation work; notebooks must not silently redefine pipeline contracts.
-- `tests/` owns automated contracts, especially leakage prevention, data schema, feature generation, metrics, and submission validity.
+- `tests/` owns automated contracts, especially leakage prevention, data schema, feature generation, metrics, and prediction-artifact validity.
 
 Runtime flow (target end-to-end pipeline):
 1. The configuration loader resolves local paths, target, seed, datetime column, and forbidden feature columns.
 2. Raw-data loading reads `data/raw/train.csv` and `data/raw/test.csv` and parses `datetime`.
 3. Preprocessing and feature generation construct numeric/categorical model inputs while ensuring `casual`, `registered`, and `count` cannot enter the direct-count feature matrix.
 4. Training fits baseline or requested candidate models using time-aware validation and a consistently applied target transformation where configured.
-5. Evaluation calculates RMSLE as the primary score plus RMSE, MAE, and R2 where applicable, then writes comparable report output.
+5. Evaluation calculates RMSLE, RMSE, MAE, and R2 together and reports them jointly, then writes comparable report output.
 6. Prediction applies the trained model to processed test features, inverts any target transformation, clips negative demand predictions to zero, and preserves original test datetime order.
-7. Submission generation writes `datetime,count` rows matching the Kaggle sample submission schema.
+7. Prediction-artifact generation writes `datetime,count` rows matching the dataset's sample schema.
 8. Optional sequential experiments model lags only with inference-realistic recursive generation and matching leakage-safe validation.
 
 Repo drift and guardrails:
@@ -70,9 +70,9 @@ Repo drift and guardrails:
 - Train contains `casual`, `registered`, and `count`; test contains none of these target-derived fields.
 - In the raw training data, `casual + registered == count`; enforce exclusion from direct-count features in configuration, preprocessing, and tests.
 - The Kaggle split is time-structured: training rows cover days 1-19 of each month and test rows cover later days. Do not treat unknown test targets as available lag inputs.
-- Preserve raw `datetime` for submission output even when it is removed from model features.
+- Preserve raw `datetime` for the prediction artifact even when it is removed from model features.
 - Do not hardcode local absolute paths, secrets, notebook-only transformations, or untracked assumptions about artifact presence.
-- Do not silently rename config keys, feature columns, artifact paths, metric keys, or submission columns once introduced.
+- Do not silently rename config keys, feature columns, artifact paths, metric keys, or prediction-artifact columns once introduced.
 
 ## 3. Data Sources & Model Artifacts
 * Kaggle Bike Sharing Demand is the primary and only required dataset source.
@@ -83,7 +83,7 @@ Repo drift and guardrails:
 * `casual` and `registered` are target-derived columns for the direct-count task and must never appear in its feature matrix.
 * Processed artifacts, once introduced, belong under `data/interim/` and `data/processed/` and should be reproducible from local raw inputs.
 * Saved trained estimators, once introduced, belong under `models/` and are generated/local artifacts rather than repository source files.
-* Figures, metric reports, and Kaggle submissions, once introduced, belong under `reports/figures/`, `reports/metrics.json`, and `reports/submissions/` respectively.
+* Figures, metric reports, and test-set prediction artifacts, once introduced, belong under `reports/figures/`, `reports/metrics.json`, and `reports/submissions/` respectively.
 * The proposal document is tracked under `docs/CMP4336-Project_Proposal-2103983-2103599-2102798.docx` and defines environmental impact, temporal visualization, and sequential-analysis goals.
 * If a lag-based sequential experiment is run, its data-generation procedure, inference behavior, validation protocol, and comparison against the non-lag baseline must be documented.
 * Do not commit private dataset variants, generated predictions, trained artifacts, virtual environments, local caches, secrets, or machine-specific paths.
@@ -102,7 +102,7 @@ Non-negotiable rules: - No emojis ever in code, logs, commits, or generated docu
 Repo-safe engineering standards: - Preserve the existing module boundaries between src/, scripts/, tests/, and config/. - Do not silently rename model files, artifact files, schema fields, or config keys. - Do not introduce broad refactors during feature work or bug work unless explicitly requested. - Prefer explicit, testable logic over abstraction-heavy wrappers and fallback-heavy control flow. - Preserve `src/bike_sharing` module boundaries: configuration in `config.py`, raw IO in `data.py`, leakage exclusion and target transforms in `preprocessing.py`. When new modules are added (`features.py`, `models.py`, `train.py`, `evaluate.py`, `predict.py`), each is single-responsibility and reusable; do not duplicate their logic inside scripts or notebooks. - `scripts/` may contain executable orchestrators that call into `src/` (e.g. future `train_model.py`, `generate_submission.py`) and reproducible artifact-building utilities (e.g. `_build_eda_notebook.py`); business, feature, modeling, or evaluation logic must not live in `scripts/`. - If you discover drift or contradictions, document them clearly in the task output instead of masking them.
 
 ## 7. Experiment Planning And Execution Log
-+ Scope: this section applies to **modeling experiments and improvement plans** — sweeps, ablations, transform changes, hyperparameter studies, and anything else whose outcome is judged against a metric. Structural phase work (scaffolding, config setup, plain feature engineering, submission plumbing) follows the §4 strategy loop and uses the approved roadmap as its plan artifact; it does not require a separate `docs/experiments/` file.
++ Scope: this section applies to **modeling experiments and improvement plans** — sweeps, ablations, transform changes, hyperparameter studies, and anything else whose outcome is judged against a metric. Structural phase work (scaffolding, config setup, plain feature engineering, prediction-artifact plumbing) follows the §4 strategy loop and uses the approved roadmap as its plan artifact; it does not require a separate `docs/experiments/` file.
 + This section defines how every such experiment / improvement plan is documented and how its execution is marked. Goal: every plan and its outcome live in one place (`docs/experiments/`) in a commit-traceable way, so future references to an experiment are `grep`-able.
 + Where the plan file goes, and what it is named:
 + All new plans are saved under `docs/experiments/`.

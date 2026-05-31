@@ -47,7 +47,7 @@
         "rmsle": 0.09753645975962368
       }
     },
-    "kaggle_holdout": {
+    "day_of_month_holdout": {
       "metrics": {
         "mae": 86.0649421910069,
         "r2": 0.5268517285272771,
@@ -106,7 +106,7 @@
         "rmsle": 0.0708828050839379
       }
     },
-    "kaggle_holdout": {
+    "day_of_month_holdout": {
       "metrics": {
         "mae": 142.64442409815052,
         "r2": -0.0007378266143607259,
@@ -165,7 +165,7 @@
         "rmsle": 0.09786602134380039
       }
     },
-    "kaggle_holdout": {
+    "day_of_month_holdout": {
       "metrics": {
         "mae": 106.17911750610148,
         "r2": 0.21424832381377668,
