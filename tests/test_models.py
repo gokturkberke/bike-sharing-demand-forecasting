@@ -9,6 +9,7 @@ from bike_sharing.models import (
     MeanBaseline,
     get_model,
 )
+from bike_sharing.preprocessing import from_log1p
 
 
 @pytest.fixture
@@ -85,3 +86,11 @@ def test_ridge_predicts_in_original_scale(cfg):
     preds = model.predict(X)
     assert (preds >= 0).all()
     assert preds.mean() > 10
+
+
+def test_ridge_inverse_clips_negative_predictions(cfg):
+    # The Ridge target inversion must be the project's clipped contract
+    # (from_log1p), not bare expm1, so a submission can never carry
+    # negative demand even if the linear model emits a negative log value.
+    model = get_model("ridge", cfg)
+    assert model.inverse_func is from_log1p

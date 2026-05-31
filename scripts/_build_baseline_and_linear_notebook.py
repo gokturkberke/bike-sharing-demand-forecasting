@@ -74,15 +74,26 @@ plt.show()
 
 METRICS_TABLE_CODE = """\
 # Load the metrics table written by scripts/train_model.py and compare.
+# Each model entry has two validation views: chronological CV ("cv") and
+# the Kaggle-like day-of-month holdout ("kaggle_holdout").
 metrics = json.loads(METRICS_PATH.read_text())
 rows = []
 for name, summary in metrics.items():
-    rows.append({"model": name, **summary["mean"], "rmsle_std": summary["std"]["rmsle"]})
+    cv = summary["cv"]["mean"]
+    holdout = summary["kaggle_holdout"]["metrics"]
+    rows.append({
+        "model": name,
+        "cv_rmsle": cv["rmsle"],
+        "cv_rmsle_std": summary["cv"]["std"]["rmsle"],
+        "holdout_rmsle": holdout["rmsle"],
+        "holdout_rmse": holdout["rmse"],
+        "holdout_mae": holdout["mae"],
+        "holdout_r2": holdout["r2"],
+    })
 table = (
     pd.DataFrame(rows)
     .set_index("model")
-    [["rmsle", "rmsle_std", "rmse", "mae", "r2"]]
-    .sort_values("rmsle")
+    .sort_values("holdout_rmsle")
 )
 table.round(3)
 """
@@ -91,7 +102,7 @@ FOLD_BREAKDOWN_CODE = """\
 # Per-fold RMSLE for the three models. Helps spot single-fold pathologies.
 fold_records = []
 for name, summary in metrics.items():
-    for i, f in enumerate(summary["folds"]):
+    for i, f in enumerate(summary["cv"]["folds"]):
         fold_records.append({"model": name, "fold": i + 1, "rmsle": f["rmsle"]})
 fold_df = pd.DataFrame(fold_records)
 
@@ -107,27 +118,26 @@ plt.show()
 """
 
 RESIDUAL_CODE = """\
-# Refit the three models on the full train set and look at residuals on
-# the same data (not a leakage test - this is for shape-of-error
-# diagnostics, not generalization).
-trained = {}
-preds = {}
-for name in ("mean_baseline", "hourly_mean_baseline", "ridge"):
-    model = get_model(name, CFG).fit(X, y)
-    trained[name] = model
-    preds[name] = model.predict(X)
+# Out-of-sample residuals: fit Ridge on the Kaggle-like train days
+# (1-15) and compute residuals on the held-out days (16-19) it never
+# saw. This is a genuine generalization view, not in-sample diagnostics.
+from bike_sharing.train import kaggle_like_holdout_split
 
-resid_df = pd.DataFrame({"hour": df["hour"], "weather": df["weather"], "y": y})
-for name, p in preds.items():
-    resid_df[f"resid_{name}"] = p - y
+train_idx, holdout_idx = kaggle_like_holdout_split(datetime)
+ridge = get_model("ridge", CFG).fit(X.iloc[train_idx], y[train_idx])
+holdout_pred = ridge.predict(X.iloc[holdout_idx])
 
-# Residuals by hour (Ridge only - the most informative for the bimodal issue).
+resid_df = pd.DataFrame({
+    "hour": X.iloc[holdout_idx]["hour"].to_numpy(),
+    "residual": holdout_pred - y[holdout_idx],
+})
+
 fig, ax = plt.subplots(figsize=(10, 4))
-sns.boxplot(data=resid_df, x="hour", y="resid_ridge", color="steelblue", ax=ax)
+sns.boxplot(data=resid_df, x="hour", y="residual", color="steelblue", ax=ax)
 ax.axhline(0, color="red", linewidth=0.8)
-ax.set_title("Ridge residuals by hour (positive = overprediction)")
+ax.set_title("Ridge out-of-sample residuals by hour (holdout days 16-19)")
 ax.set_xlabel("hour of day")
-ax.set_ylabel("residual (pred - actual)")
+ax.set_ylabel("residual (pred - actual; positive = overprediction)")
 fig.tight_layout()
 fig.savefig(FIG_DIR / "11_ridge_residuals_by_hour.png", dpi=120, bbox_inches="tight")
 plt.show()
@@ -140,7 +150,11 @@ CELLS = [
         "\n"
         "First modeling pass. Establishes two baselines (global mean, "
         "hour-of-day mean) plus a Ridge regression with `log1p` target "
-        "transformation, evaluated with `TimeSeriesSplit(5)`. The metrics "
+        "transformation. Each model is evaluated two ways: a "
+        "chronological `TimeSeriesSplit(5)` (forecast future months) and "
+        "a Kaggle-like day-of-month holdout (train on days 1-15, validate "
+        "on the latest labeled days 16-19 — the axis along which the "
+        "competition's train/test sets actually differ). The metrics "
         "tables and figures below are sourced from `reports/metrics.json` "
         "produced by `scripts/train_model.py`. This notebook is "
         "diagnostic, not part of the runtime pipeline."
@@ -158,10 +172,15 @@ CELLS = [
     ),
     new_code_cell(CV_FOLDS_CODE),
     new_markdown_cell(
-        "## 2. CV metric comparison\n"
+        "## 2. Metric comparison (CV vs Kaggle-like holdout)\n"
         "\n"
-        "RMSLE is the primary score (it matches Kaggle's grading). RMSE, "
-        "MAE, and R² are diagnostic only. Lower RMSLE is better."
+        "RMSLE is the primary score (it matches Kaggle's grading); RMSE, "
+        "MAE, R² are diagnostic. Both validation views are shown: "
+        "`cv_rmsle` is the mean over the five chronological folds, "
+        "`holdout_rmsle` is the single day-of-month holdout score. The "
+        "holdout is the more representative number for leaderboard model "
+        "selection because it matches the competition's day-of-month "
+        "extrapolation. Lower is better; table sorted by holdout RMSLE."
     ),
     new_code_cell(METRICS_TABLE_CODE),
     new_markdown_cell(
@@ -175,30 +194,38 @@ CELLS = [
     ),
     new_code_cell(FOLD_BREAKDOWN_CODE),
     new_markdown_cell(
-        "## 4. Ridge residuals by hour\n"
+        "## 4. Ridge out-of-sample residuals by hour\n"
         "\n"
         "First-harmonic cyclic features (`hour_sin`, `hour_cos`) plus "
         "`workingday` cannot represent two different hourly curves at "
-        "once. The Phase 3 review predicted this; the residual plot "
-        "below makes it visible: Ridge underestimates the morning + "
-        "evening commuter rush on working days and overpredicts "
-        "midday/night demand. The hourly-mean baseline has zero "
-        "structural problem with this shape, which is why it currently "
-        "outperforms Ridge."
+        "once. The Phase 3 review predicted this. The plot below makes it "
+        "visible on genuinely held-out data: Ridge is fit on days 1-15 "
+        "and its residuals are computed on days 16-19, which it never "
+        "saw. Systematic over/under-prediction across the hour axis (not "
+        "noise around zero) confirms the structural limitation rather "
+        "than overfitting. The hourly-mean baseline has no such problem "
+        "with this shape, which is why it currently wins."
     ),
     new_code_cell(RESIDUAL_CODE),
     new_markdown_cell(
         "## Findings (feed into Phase 4 review and Phase 5 trees)\n"
         "\n"
-        "- `hourly_mean_baseline` is the strongest model so far. The two-"
-        "peak commuter pattern is exactly what a per-hour mean captures "
-        "trivially. Ridge with first-harmonic cyclic encoding cannot.\n"
-        "- `ridge` beats `mean_baseline` cleanly on every fold but loses "
-        "to `hourly_mean_baseline`. This is consistent with the Phase 3 "
+        "- `hourly_mean_baseline` is the strongest model so far on both "
+        "validation views. The two-peak commuter pattern is exactly what "
+        "a per-hour mean captures trivially. Ridge with first-harmonic "
+        "cyclic encoding cannot.\n"
+        "- `ridge` beats `mean_baseline` cleanly but loses to "
+        "`hourly_mean_baseline`. This is consistent with the Phase 3 "
         "review's prediction; the Ridge feature set was deliberately "
         "kept honest (cyclic only, no hour one-hot or hour×workingday "
         "interaction) so this gap is informative rather than something "
         "to hide.\n"
+        "- Two validation views agree on the ranking, which is "
+        "reassuring: the chronological CV (forecast future months) and "
+        "the day-of-month holdout (extrapolate later days, matching the "
+        "Kaggle split) both rank hourly-mean > ridge > mean. When they "
+        "disagree in later phases, trust the holdout for leaderboard "
+        "decisions.\n"
         "- The Ridge ColumnTransformer drops the raw ordinal time "
         "columns (`hour`, `month`, `dayofweek`, `year`); only cyclic "
         "encodings and one-hot `season`/`weather` are exposed to the "

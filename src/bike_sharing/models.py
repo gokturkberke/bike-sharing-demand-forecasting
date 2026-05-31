@@ -15,6 +15,8 @@ from sklearn.linear_model import Ridge
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
+from bike_sharing.preprocessing import from_log1p
+
 # Feature partitioning for the linear model. Raw ordinal time columns
 # (hour, month, dayofweek, year) are intentionally dropped: a linear
 # model treats them as monotone trends and extrapolates beyond the
@@ -106,10 +108,14 @@ def _build_ridge(cfg: dict[str, Any]) -> TransformedTargetRegressor:
             ("ridge", Ridge(alpha=1.0, random_state=seed)),
         ]
     )
+    # inverse_func is from_log1p (expm1 + clip-at-0), the project's target
+    # inversion contract, not bare expm1: a Ridge fit in log space can emit
+    # slightly negative values that expm1 would turn into negative demand.
+    # from_log1p(log1p(y)) == y for non-negative y, so check_inverse passes.
     return TransformedTargetRegressor(
         regressor=inner,
         func=np.log1p,
-        inverse_func=np.expm1,
+        inverse_func=from_log1p,
     )
 
 

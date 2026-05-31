@@ -1,10 +1,11 @@
 """Train a single model end-to-end and persist its metrics + artifact.
 
 Thin orchestrator. Loads the processed train parquet (produced by
-``prepare_data.py``), runs time-aware cross-validation via
-``train.fit_and_cv``, fits the model on the full train set, writes
-``models/<name>.joblib``, and updates ``reports/metrics.json`` with this
-run's entry.
+``prepare_data.py``), runs two leakage-safe validations - a chronological
+``TimeSeriesSplit`` (``train.fit_and_cv``) and the Kaggle-like
+day-of-month holdout (``train.evaluate_holdout``) - fits the model on the
+full train set, writes ``models/<name>.joblib``, and updates
+``reports/metrics.json`` with this run's entry.
 
 Run from the project root, after ``prepare_data.py``:
 
@@ -22,7 +23,7 @@ import pandas as pd
 
 from bike_sharing.config import load_config
 from bike_sharing.models import MODEL_FACTORIES, get_model
-from bike_sharing.train import fit_and_cv
+from bike_sharing.train import evaluate_holdout, fit_and_cv
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CONFIG_PATH = PROJECT_ROOT / "config" / "config.yaml"
@@ -47,6 +48,7 @@ def main(model_name: str, config_path: Path = DEFAULT_CONFIG_PATH) -> None:
 
     model = get_model(model_name, cfg)
     cv_summary = fit_and_cv(model, X, y, datetime, cfg)
+    holdout_summary = evaluate_holdout(get_model(model_name, cfg), X, y, datetime, cfg)
 
     # Fit on full train for the persisted artifact.
     fitted = get_model(model_name, cfg).fit(X, y)
@@ -61,13 +63,16 @@ def main(model_name: str, config_path: Path = DEFAULT_CONFIG_PATH) -> None:
 
     metrics_path = reports_dir / "metrics.json"
     metrics = _load_metrics(metrics_path)
-    metrics[model_name] = cv_summary
+    metrics[model_name] = {"cv": cv_summary, "kaggle_holdout": holdout_summary}
     _save_metrics(metrics_path, metrics)
 
     mean = cv_summary["mean"]
+    holdout = holdout_summary["metrics"]
     print(f"model={model_name}")
-    print(f"  cv mean: rmsle={mean['rmsle']:.4f} rmse={mean['rmse']:.2f} "
+    print(f"  cv mean:        rmsle={mean['rmsle']:.4f} rmse={mean['rmse']:.2f} "
           f"mae={mean['mae']:.2f} r2={mean['r2']:.3f}")
+    print(f"  kaggle holdout: rmsle={holdout['rmsle']:.4f} rmse={holdout['rmse']:.2f} "
+          f"mae={holdout['mae']:.2f} r2={holdout['r2']:.3f}")
     print(f"  saved estimator: {model_path.relative_to(PROJECT_ROOT)}")
     print(f"  updated metrics: {metrics_path.relative_to(PROJECT_ROOT)}")
 

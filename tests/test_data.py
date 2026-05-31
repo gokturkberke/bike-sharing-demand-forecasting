@@ -99,8 +99,41 @@ def test_null_paths_raises_mapping_error(tmp_path):
         "datetime_col: datetime\n"
         "paths: null\n"
         "drop_columns: []\n"
+        "cv:\n"
+        "  n_splits: 5\n"
     )
     with pytest.raises(ValueError, match="paths"):
+        load_config(bad)
+
+
+def test_missing_cv_raises_error(tmp_path):
+    bad = tmp_path / "no_cv.yaml"
+    bad.write_text(
+        "seed: 42\n"
+        "target: count\n"
+        "datetime_col: datetime\n"
+        "paths:\n"
+        "  raw_train: data/raw/train.csv\n"
+        "  raw_test: data/raw/test.csv\n"
+        "drop_columns: [casual, registered]\n"
+    )
+    with pytest.raises(ValueError, match="cv"):
+        load_config(bad)
+
+
+def test_cv_without_n_splits_raises_error(tmp_path):
+    all_paths = "\n".join(f"  {p}: data/{p}" for p in REQUIRED_PATHS)
+    bad = tmp_path / "cv_no_nsplits.yaml"
+    bad.write_text(
+        "seed: 42\n"
+        "target: count\n"
+        "datetime_col: datetime\n"
+        "paths:\n"
+        f"{all_paths}\n"
+        "drop_columns: [casual, registered]\n"
+        "cv: {}\n"
+    )
+    with pytest.raises(ValueError, match="n_splits"):
         load_config(bad)
 
 
@@ -117,6 +150,8 @@ def test_missing_pipeline_path_raises_clear_error(tmp_path, missing_path):
         "paths:\n"
         f"{defined_paths}\n"
         "drop_columns: [casual, registered]\n"
+        "cv:\n"
+        "  n_splits: 5\n"
     )
     with pytest.raises(ValueError, match=missing_path):
         load_config(bad)

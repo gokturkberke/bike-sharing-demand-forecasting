@@ -5,7 +5,7 @@ from typing import Any
 
 import yaml
 
-REQUIRED_TOP_LEVEL_KEYS = ("seed", "target", "datetime_col", "paths", "drop_columns")
+REQUIRED_TOP_LEVEL_KEYS = ("seed", "target", "datetime_col", "paths", "drop_columns", "cv")
 PATH_KEYS_TO_RESOLVE = (
     "raw_train",
     "raw_test",
@@ -52,6 +52,11 @@ def _validate(cfg: Any) -> None:
     missing_paths = [k for k in REQUIRED_PATH_KEYS if k not in cfg["paths"]]
     if missing_paths:
         raise ValueError(f"config['paths'] missing required keys: {missing_paths}")
+    if not isinstance(cfg["cv"], dict) or "n_splits" not in cfg["cv"]:
+        raise ValueError(
+            "config['cv'] must be a mapping containing 'n_splits'; "
+            f"got {cfg['cv']!r}."
+        )
 
 
 def _resolve_paths(cfg: dict[str, Any], project_root: Path) -> None:

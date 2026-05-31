@@ -78,13 +78,15 @@ python scripts/generate_submission.py --model xgb
 
 ## Results
 
-| Model | RMSLE | RMSE | MAE | R² |
-|---|---|---|---|---|
-| Mean baseline | 1.402 | 196.4 | 149.3 | -0.21 |
-| Hourly-mean baseline | 0.739 | 143.0 | 99.3 | 0.35 |
-| Ridge (cyclic + log1p) | 0.987 | 168.9 | 115.2 | 0.11 |
-| Random Forest | — | — | — | — |
-| Gradient Boosting | — | — | — | — |
-| XGBoost | — | — | — | — |
+RMSLE is the primary metric. Each model is validated two leakage-safe ways: chronological `TimeSeriesSplit(5)` (mean over folds) and a Kaggle-like day-of-month holdout (train on days 1-15, validate on the latest labeled days 16-19 — the axis along which the competition's train/test sets differ).
 
-Phase 4 CV (TimeSeriesSplit, n_splits=5). Ridge with first-harmonic cyclic features loses to the hour-of-day mean baseline; trees in Phase 5 and richer linear features (deferred to a Phase 4 review experiment) are expected to close the gap.
+| Model | CV RMSLE | Holdout RMSLE | Holdout RMSE | Holdout MAE | Holdout R² |
+|---|---|---|---|---|---|
+| Mean baseline | 1.402 | 1.531 | 183.1 | 142.6 | -0.00 |
+| Hourly-mean baseline | 0.739 | 0.755 | 125.9 | 86.1 | 0.53 |
+| Ridge (cyclic + log1p) | 0.987 | 0.906 | 162.2 | 106.2 | 0.21 |
+| Random Forest | — | — | — | — | — |
+| Gradient Boosting | — | — | — | — | — |
+| XGBoost | — | — | — | — | — |
+
+Both views rank hourly-mean > ridge > mean. Ridge with first-harmonic cyclic features cannot represent the bimodal commuter pattern, so it loses to the hour-of-day baseline; trees in Phase 5 and richer linear features (a Phase 4 review experiment) are expected to close the gap.
