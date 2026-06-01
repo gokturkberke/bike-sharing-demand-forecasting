@@ -45,6 +45,8 @@ Verify the package is importable:
 python -c "import bike_sharing; print(bike_sharing.__version__)"
 ```
 
+> macOS note: `xgboost` needs the OpenMP runtime, which pip does not bundle. If `import xgboost` fails with a `libomp` error, run `brew install libomp`. Every other model (baselines, Ridge, the scikit-learn trees) works without it, and `xgboost` is the only model that needs it.
+
 ## Data setup
 
 The raw CSVs are not tracked in the repo. Download them from the Kaggle competition page and place the three files exactly as follows:

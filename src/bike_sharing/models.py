@@ -207,10 +207,14 @@ def _build_xgboost(
     """
     try:
         from xgboost import XGBRegressor
-    except ImportError as exc:  # pragma: no cover - exercised only when absent
+    except Exception as exc:  # pragma: no cover - only when xgboost is unusable
+        # ImportError if the package is absent; XGBoostError/OSError if the
+        # native library cannot load - on macOS that usually means the
+        # OpenMP runtime (libomp) is missing.
         raise ImportError(
-            "xgboost is not installed. Run `pip install -r requirements.txt` "
-            "(or `pip install xgboost`) to use the 'xgboost' model."
+            "xgboost could not be imported. Install it with "
+            "`pip install -r requirements.txt` (or `pip install xgboost`); "
+            "on macOS the native runtime also needs OpenMP (`brew install libomp`)."
         ) from exc
     seed = int(cfg.get("seed", 42))
     model = XGBRegressor(random_state=seed, **params)

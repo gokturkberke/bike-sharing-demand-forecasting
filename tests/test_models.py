@@ -60,8 +60,14 @@ def test_factory_known_names_return_estimators(cfg):
 
 
 def test_xgboost_factory_returns_estimator(cfg):
-    # xgboost is an optional dependency; skip cleanly if not installed.
-    pytest.importorskip("xgboost")
+    # xgboost is an optional dependency; skip cleanly if it cannot be used.
+    # Not just "not installed": its native runtime can fail to load (e.g.
+    # missing OpenMP/libomp on macOS), which raises XGBoostError - NOT an
+    # ImportError - so pytest.importorskip would not catch it.
+    try:
+        import xgboost  # noqa: F401
+    except Exception as exc:
+        pytest.skip(f"xgboost unavailable: {exc}")
     model = get_model("xgboost", cfg)
     assert hasattr(model, "fit")
     assert hasattr(model, "predict")
