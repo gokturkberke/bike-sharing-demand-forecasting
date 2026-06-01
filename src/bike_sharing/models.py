@@ -33,6 +33,13 @@ LINEAR_PASSTHROUGH_COLUMNS = [
     "hour_cos",
     "month_sin",
     "month_cos",
+    # experiment: 2026-06-01_leakage-safe-feature-sweep.md - the second
+    # harmonic and workingday-gated cyclic terms let Ridge represent two
+    # daily peaks (holdout RMSLE 0.91 -> 0.72). Bounded, so passthrough.
+    "hour_sin2",
+    "hour_cos2",
+    "hour_sin_workday",
+    "hour_cos_workday",
 ]
 LINEAR_ONE_HOT_COLUMNS = ["season", "weather"]
 
@@ -109,6 +116,46 @@ def _build_ridge(cfg: dict[str, Any], params: dict[str, Any]) -> TransformedTarg
         transformers=[
             ("num", StandardScaler(), LINEAR_NUMERIC_COLUMNS),
             ("pass", "passthrough", LINEAR_PASSTHROUGH_COLUMNS),
+            (
+                "oh",
+                OneHotEncoder(handle_unknown="ignore", sparse_output=False),
+                LINEAR_ONE_HOT_COLUMNS,
+            ),
+        ],
+        remainder="drop",
+    )
+    inner = Pipeline(
+        [
+            ("pre", preprocessor),
+            ("ridge", Ridge(alpha=params.get("alpha", 1.0), random_state=seed)),
+        ]
+    )
+    return _log_target(inner)
+
+
+def build_experimental_ridge(
+    cfg: dict[str, Any],
+    params: dict[str, Any],
+    extra_numeric: tuple[str, ...] = (),
+    extra_passthrough: tuple[str, ...] = (),
+) -> TransformedTargetRegressor:
+    """Experiment-only Ridge: the production Ridge with extra candidate
+    columns routed into the ColumnTransformer.
+
+    Used by ``scripts/run_feature_experiment.py`` to test whether candidate
+    features help the linear baseline (production Ridge drops any column not
+    in the ``LINEAR_*`` lists, so it cannot see them otherwise). Production
+    ``get_model('ridge')`` / ``_build_ridge`` are unchanged.
+    """
+    seed = int(cfg.get("seed", 42))
+    preprocessor = ColumnTransformer(
+        transformers=[
+            ("num", StandardScaler(), LINEAR_NUMERIC_COLUMNS + list(extra_numeric)),
+            (
+                "pass",
+                "passthrough",
+                LINEAR_PASSTHROUGH_COLUMNS + list(extra_passthrough),
+            ),
             (
                 "oh",
                 OneHotEncoder(handle_unknown="ignore", sparse_output=False),

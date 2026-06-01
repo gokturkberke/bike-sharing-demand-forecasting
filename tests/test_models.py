@@ -92,6 +92,10 @@ def test_ridge_predicts_in_original_scale(cfg):
             "hour_cos": rng.uniform(-1, 1, size=n),
             "month_sin": rng.uniform(-1, 1, size=n),
             "month_cos": rng.uniform(-1, 1, size=n),
+            "hour_sin2": rng.uniform(-1, 1, size=n),
+            "hour_cos2": rng.uniform(-1, 1, size=n),
+            "hour_sin_workday": rng.uniform(-1, 1, size=n),
+            "hour_cos_workday": rng.uniform(-1, 1, size=n),
             "season": rng.integers(1, 5, size=n),
             "weather": rng.integers(1, 4, size=n),
         }

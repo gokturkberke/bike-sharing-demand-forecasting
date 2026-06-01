@@ -32,8 +32,23 @@ CYCLIC_FEATURE_COLUMNS = (
     "hour_cos",
     "month_sin",
     "month_cos",
+    # Second-harmonic hour terms. experiment:
+    # 2026-06-01_leakage-safe-feature-sweep.md - promoted with the
+    # workingday-gated terms below; together they let the linear baseline
+    # represent the bimodal daily demand shape.
+    "hour_sin2",
+    "hour_cos2",
 )
-ADDED_FEATURE_COLUMNS = TIME_FEATURE_COLUMNS + CYCLIC_FEATURE_COLUMNS
+# Workingday-gated cyclic terms. experiment:
+# 2026-06-01_leakage-safe-feature-sweep.md - the interaction_harmonic group
+# cut Ridge holdout RMSLE 0.91 -> 0.72 while every tree held or improved.
+INTERACTION_FEATURE_COLUMNS = (
+    "hour_sin_workday",
+    "hour_cos_workday",
+)
+ADDED_FEATURE_COLUMNS = (
+    TIME_FEATURE_COLUMNS + CYCLIC_FEATURE_COLUMNS + INTERACTION_FEATURE_COLUMNS
+)
 
 
 def build_features(df: pd.DataFrame, cfg: dict[str, Any]) -> pd.DataFrame:
@@ -58,5 +73,57 @@ def build_features(df: pd.DataFrame, cfg: dict[str, Any]) -> pd.DataFrame:
     out["hour_cos"] = np.cos(2 * np.pi * out["hour"] / 24).astype("float32")
     out["month_sin"] = np.sin(2 * np.pi * (out["month"] - 1) / 12).astype("float32")
     out["month_cos"] = np.cos(2 * np.pi * (out["month"] - 1) / 12).astype("float32")
+
+    # Second harmonic of the hour cycle: a single sin/cos pair has one peak
+    # per day; the second harmonic adds the structure needed for two.
+    out["hour_sin2"] = np.sin(2 * 2 * np.pi * out["hour"] / 24).astype("float32")
+    out["hour_cos2"] = np.cos(2 * 2 * np.pi * out["hour"] / 24).astype("float32")
+    # Cyclic hour gated by workingday: a linear-safe encoding of the
+    # hour x workingday interaction (the two daily shapes).
+    out["hour_sin_workday"] = (out["hour_sin"] * out["workingday"]).astype("float32")
+    out["hour_cos_workday"] = (out["hour_cos"] * out["workingday"]).astype("float32")
+
+    return out
+
+
+# --- Experimental candidate features (feature sweep) ---------------------
+# NOT part of the production feature set. These are the candidates from
+# docs/experiments/2026-06-01_leakage-safe-feature-sweep.md that did NOT
+# clear the promotion rule: the workingday-gated cyclic + second-harmonic
+# group was promoted into build_features above; the columns below were
+# dropped (peaks were redundant with that encoding, the environmental
+# products regressed the trees, the year flag was marginal). They are kept
+# so scripts/run_feature_experiment.py stays reproducible. All are
+# leakage-safe and computable on train and test alike, split by how the
+# experimental Ridge routes them (scaled numeric vs passthrough).
+CANDIDATE_NUMERIC_COLUMNS = ("feels_like_gap", "temp_humidity_interaction")
+CANDIDATE_PASSTHROUGH_COLUMNS = (
+    "is_morning_peak",
+    "is_evening_peak",
+    "is_rush_hour",
+    "is_2012",
+    "bad_weather",
+)
+CANDIDATE_FEATURE_COLUMNS = CANDIDATE_NUMERIC_COLUMNS + CANDIDATE_PASSTHROUGH_COLUMNS
+
+
+def build_candidate_features(df: pd.DataFrame, cfg: dict[str, Any]) -> pd.DataFrame:
+    """Return ``build_features(df)`` plus the (un-promoted) candidate columns.
+
+    Experiment-only (see the module note above): production code calls
+    ``build_features``, not this. Composes ``build_features`` first because
+    the candidates depend on its ``hour``/``year`` outputs.
+    """
+    out = build_features(df, cfg)
+    hour = out["hour"]
+
+    out["is_morning_peak"] = hour.isin([7, 8, 9]).astype("int8")
+    out["is_evening_peak"] = hour.isin([16, 17, 18, 19]).astype("int8")
+    out["is_rush_hour"] = (out["is_morning_peak"] | out["is_evening_peak"]).astype("int8")
+
+    out["is_2012"] = (out["year"] == 2012).astype("int8")
+    out["feels_like_gap"] = (out["atemp"] - out["temp"]).astype("float32")
+    out["temp_humidity_interaction"] = (out["temp"] * out["humidity"]).astype("float32")
+    out["bad_weather"] = (out["weather"] >= 3).astype("int8")
 
     return out

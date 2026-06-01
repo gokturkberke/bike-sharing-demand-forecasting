@@ -19,14 +19,14 @@ Day-of-month holdout (primary view) with the CV RMSLE alongside:
 
 | Model | RMSLE | RMSE | MAE | R² | CV RMSLE |
 |---|---|---|---|---|---|
-| XGBoost | 0.309 | 46.5 | 27.6 | 0.94 | 0.447 |
-| Random Forest | 0.330 | 51.9 | 30.4 | 0.92 | 0.514 |
-| Gradient Boosting | 0.334 | 59.0 | 36.5 | 0.90 | 0.471 |
+| XGBoost | 0.306 | 47.5 | 28.0 | 0.93 | 0.463 |
+| Gradient Boosting | 0.312 | 51.7 | 31.0 | 0.92 | 0.453 |
+| Random Forest | 0.328 | 51.8 | 29.9 | 0.92 | 0.515 |
+| Ridge (cyclic + log1p) | 0.718 | 140.8 | 89.1 | 0.41 | 0.806 |
 | Hourly-mean baseline | 0.755 | 125.9 | 86.1 | 0.53 | 0.739 |
-| Ridge (cyclic + log1p) | 0.905 | 162.2 | 106.2 | 0.21 | 0.987 |
 | Mean baseline | 1.531 | 183.1 | 142.6 | -0.00 | 1.402 |
 
-The three tree/boosting models roughly **halve** the error of the best baseline and reach R² ≈ 0.90-0.94 on the harder holdout. XGBoost is narrowly the strongest on both views, but Random Forest and Gradient Boosting are close — treat the three as a near-tie rather than reading a decisive winner from one metric.
+The three tree/boosting models roughly **halve** the error of the best baseline and reach R² ≈ 0.92-0.93 on the harder holdout. XGBoost is narrowly the strongest on both views, but Random Forest and Gradient Boosting are close — treat the three as a near-tie rather than reading a decisive winner from one metric. The Ridge row reflects the feature experiment in `docs/experiments/2026-06-01_leakage-safe-feature-sweep.md`: adding second-harmonic and workingday-gated cyclic features lowered its holdout RMSLE from 0.905 to 0.718, enough to edge past the hourly-mean baseline. This is a linear-baseline / explainability gain — it does not change the model ranking, and the deployed XGBoost is essentially unchanged (0.309 -> 0.306).
 
 ## What the results say about the proposal's questions
 
@@ -34,8 +34,8 @@ The three tree/boosting models roughly **halve** the error of the best baseline 
 
 Demand is driven first by time-of-day, and the daily shape differs sharply between working and non-working days: a bimodal morning + evening commuter peak on working days versus a single smoother afternoon peak otherwise. This `hour × workingday` interaction is the crux of the problem:
 
-- A linear model (Ridge) with first-harmonic cyclic hour features **cannot** represent two peaks in one day. It beat the global mean but lost to the trivial hour-of-day average (RMSLE 0.905 vs 0.755).
-- The tree/boosting models capture the interaction non-linearly and cut the error in half.
+- A linear model (Ridge) with only first-harmonic cyclic hour features **cannot** represent two peaks in one day, so it originally beat the global mean but lost to the trivial hour-of-day average (RMSLE 0.905 vs 0.755). The feature experiment (`docs/experiments/2026-06-01_leakage-safe-feature-sweep.md`) added a second hour harmonic and workingday-gated cyclic terms — a linear-safe encoding of the `hour × workingday` interaction — and Ridge fell to 0.718, just past the hourly-mean baseline. It is still far behind the trees, but it demonstrates that the bimodal shape, not linearity itself, was the linear model's binding constraint.
+- The tree/boosting models capture the interaction non-linearly and cut the error in half without any explicit interaction feature.
 - Feature importance is dominated by `hour` (and its cyclic encodings), `workingday`, and `year`. The residuals-by-hour figure for the best model (figure 15) hug zero across the whole day — the opposite of Ridge's hour-structured residuals in notebook 03.
 
 ### Environmental impact (a real but secondary signal)

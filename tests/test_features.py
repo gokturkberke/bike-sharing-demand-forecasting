@@ -10,8 +10,13 @@ from bike_sharing.config import load_config
 from bike_sharing.data import load_raw_test, load_raw_train
 from bike_sharing.features import (
     ADDED_FEATURE_COLUMNS,
+    CANDIDATE_FEATURE_COLUMNS,
+    CANDIDATE_NUMERIC_COLUMNS,
+    CANDIDATE_PASSTHROUGH_COLUMNS,
     CYCLIC_FEATURE_COLUMNS,
+    INTERACTION_FEATURE_COLUMNS,
     TIME_FEATURE_COLUMNS,
+    build_candidate_features,
     build_features,
 )
 from bike_sharing.preprocessing import drop_leakage_columns
@@ -58,6 +63,17 @@ def test_cyclic_columns_within_unit_circle(featured_train):
         # The encoding must vary across the dataset — guard against a
         # constant column that would silently coerce to a useless feature.
         assert np.ptp(values) > 0.5
+
+
+def test_interaction_columns_within_unit_circle(featured_train):
+    # Workingday-gated cyclic terms are cyclic value * {0,1}, so they stay
+    # within [-1, 1] and are zero on non-working days.
+    for col in INTERACTION_FEATURE_COLUMNS:
+        values = featured_train[col].to_numpy()
+        assert values.min() >= -1.0
+        assert values.max() <= 1.0
+    workingday = featured_train["workingday"].to_numpy()
+    assert (featured_train["hour_sin_workday"].to_numpy()[workingday == 0] == 0).all()
 
 
 def test_time_columns_have_expected_ranges(featured_train):
@@ -112,12 +128,60 @@ def test_train_and_test_predictor_schemas_match(cfg):
     assert "day" not in train_predictors.columns
 
 
+@pytest.fixture(scope="module")
+def candidate_train(cfg) -> pd.DataFrame:
+    return build_candidate_features(load_raw_train(cfg), cfg)
+
+
+def test_candidate_features_do_not_leak_into_production(featured_train):
+    # The experimental candidates must not be part of the production set.
+    for col in CANDIDATE_FEATURE_COLUMNS:
+        assert col not in ADDED_FEATURE_COLUMNS
+        assert col not in featured_train.columns
+
+
+def test_candidate_features_add_expected_columns(candidate_train):
+    # Production features survive, candidates are added on top.
+    for col in ADDED_FEATURE_COLUMNS:
+        assert col in candidate_train.columns
+    for col in CANDIDATE_FEATURE_COLUMNS:
+        assert col in candidate_train.columns
+
+
+def test_candidate_binaries_are_zero_one(candidate_train):
+    binaries = [
+        "is_morning_peak", "is_evening_peak", "is_rush_hour", "is_2012", "bad_weather",
+    ]
+    for col in binaries:
+        assert candidate_train[col].isin([0, 1]).all()
+
+
+def test_candidate_features_no_nan(candidate_train):
+    assert candidate_train[list(CANDIDATE_FEATURE_COLUMNS)].isna().sum().sum() == 0
+
+
+def test_candidate_features_train_test_parity(cfg):
+    train_cand = build_candidate_features(load_raw_train(cfg), cfg)
+    test_cand = build_candidate_features(load_raw_test(cfg), cfg)
+    # Every candidate column must exist on both sets (computable at inference).
+    for col in CANDIDATE_FEATURE_COLUMNS:
+        assert col in train_cand.columns
+        assert col in test_cand.columns
+    # The numeric/passthrough split must cover the full candidate set exactly.
+    assert set(CANDIDATE_NUMERIC_COLUMNS) | set(CANDIDATE_PASSTHROUGH_COLUMNS) == set(
+        CANDIDATE_FEATURE_COLUMNS
+    )
+
+
 def test_cyclic_encoding_continuity():
     # Hour 23 should be adjacent to hour 0 in the sin/cos space; this is
     # the whole reason for the cyclic encoding.
     cfg = {"datetime_col": "datetime"}
     df = pd.DataFrame(
-        {"datetime": pd.to_datetime(["2011-01-01 00:00:00", "2011-01-01 23:00:00"])}
+        {
+            "datetime": pd.to_datetime(["2011-01-01 00:00:00", "2011-01-01 23:00:00"]),
+            "workingday": [1, 1],
+        }
     )
     out = build_features(df, cfg)
     hour_0 = (out.loc[0, "hour_sin"], out.loc[0, "hour_cos"])
