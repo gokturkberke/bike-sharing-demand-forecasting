@@ -50,7 +50,10 @@
   candidate set).
 - **Expected outcome:** candidate frame builds cleanly on train and test; production schema
   test still passes (production `build_features` untouched).
-- **DONE / DROPPED:**
+- **DONE (commit `9f65041`):** Added `build_candidate_features` + `CANDIDATE_*` tuples to
+  `features.py` and the experiment-only `build_experimental_ridge` to `models.py`; added
+  candidate-feature contracts to `tests/test_features.py`. Production `build_features` was
+  unchanged at this stage.
 
 ## 2) Run the sweep against both validation views
 
@@ -67,7 +70,26 @@
   - Record CV-mean RMSLE and holdout RMSLE/RMSE/MAE/R^2 for each, plus the holdout-RMSLE delta.
 - **Test / verification:** sweep JSON produced; results table pasted below.
 - **Expected outcome:** decide per the promotion rule.
-- **DONE / DROPPED:**
+- **DONE (commit `9f65041`):** Ran `scripts/run_feature_experiment.py` as a per-group
+  ablation across both validation views. The baseline reproduced production `metrics.json`
+  exactly (ridge 0.9055, xgb 0.3088, rf 0.3296, gbm 0.3336), confirming the harness.
+  - Metric / result (day-of-month holdout RMSLE, with improvement vs baseline):
+
+    | group | ridge | random_forest | gradient_boosting | xgboost |
+    |---|---|---|---|---|
+    | baseline | 0.9055 | 0.3296 | 0.3336 | 0.3088 |
+    | interaction_harmonic | 0.7184 (+0.187) | 0.3284 (+0.001) | 0.3120 (+0.022) | 0.3064 (+0.002) |
+    | peaks | 0.7705 (+0.135) | 0.3309 (-0.001) | 0.3332 (+0.000) | 0.3068 (+0.002) |
+    | environmental | 0.9048 (+0.001) | 0.3345 (-0.005) | 0.3429 (-0.009) | 0.3146 (-0.006) |
+    | year_trend | 0.8739 (+0.032) | 0.3298 (-0.000) | 0.3337 (-0.000) | 0.3093 (-0.001) |
+    | all | 0.6402 (+0.265) | 0.3303 (-0.001) | 0.3154 (+0.018) | 0.3091 (-0.000) |
+
+  - Result artifact: `docs/experiments/2026-06-01_leakage-safe-feature-sweep.json`
+  - Decision: only **interaction_harmonic** clears the promotion rule with every model
+    holding or improving (Ridge +0.187, all trees >= 0). The `environmental` group regresses
+    the trees (xgb -0.006, beyond the 0.005 guardrail) and barely helps Ridge; `peaks` and
+    `year_trend` help only Ridge and are redundant with the cyclic encoding. Promote
+    interaction_harmonic only; drop the rest. Fed into item 3.
 
 ## 3) (Conditional) Promote the winning subset to production
 
@@ -82,4 +104,18 @@
 - **Test / verification:** `pytest` green; `metrics.json` diff shows the recorded gain and no
   tree regression beyond the guardrail.
 - **Expected outcome:** production metrics improve per the rule; otherwise this item is DROPPED.
-- **DONE / DROPPED:**
+- **DONE (commits `9f65041`, `b722888`):** Promoted the four interaction_harmonic columns into
+  `build_features` (`CYCLIC_FEATURE_COLUMNS` gains `hour_sin2`/`hour_cos2`, new
+  `INTERACTION_FEATURE_COLUMNS` holds `hour_sin_workday`/`hour_cos_workday`), added them to
+  Ridge's `LINEAR_PASSTHROUGH_COLUMNS`, updated tests, shrank the candidate set to the
+  un-promoted columns, re-ran `prepare_data.py` + retrained all six models, and rebuilt and
+  executed notebooks 02-05 with updated narratives/figures. `reports/RESULTS.md` updated.
+  - Metric / result (day-of-month holdout RMSLE): ridge 0.905 -> **0.718** (now beats the
+    hourly-mean baseline 0.755), gradient_boosting 0.334 -> 0.312, xgboost 0.309 -> **0.306**
+    (still best, no regression), random_forest 0.330 -> 0.328. Guardrail held (no tree
+    regression > 0.005).
+  - Result artifact: `reports/metrics.json`
+  - Decision: **shipped** to production as a linear-baseline / explainability improvement. The
+    deployed XGBoost is essentially unchanged and the model ranking is unchanged; the headline
+    gain is that engineered features let the linear baseline finally edge past the hourly-mean
+    benchmark, confirming the bimodal daily shape (not linearity) was its binding constraint.
