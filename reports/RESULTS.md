@@ -11,6 +11,8 @@ Every model is scored on the original `count` scale with four metrics read **tog
 
 `casual` and `registered` are never used as features (they sum to `count` and are absent from the test set). The target is modeled as `log1p(count)` and inverted with `expm1` clipped at zero, so no prediction is ever negative.
 
+A train/test distribution check (figures 17-18) confirms the day-of-month holdout is a fair proxy for the real test set: the numeric predictors (temp, atemp, humidity, windspeed) have near-identical means and spreads across the labeled days (1-19) and the later test days (20+), and the categorical/temporal shares (season, weather, holiday, workingday, hour, month) line up almost exactly. There is no meaningful covariate shift — the test set is simply later days from the same regime.
+
 ## Model comparison
 
 Day-of-month holdout (primary view) with the CV RMSLE alongside:
@@ -38,7 +40,11 @@ Demand is driven first by time-of-day, and the daily shape differs sharply betwe
 
 ### Environmental impact (a real but secondary signal)
 
-Temperature, humidity, weather category, and season form the next tier of importance. They modulate demand around the dominant daily rhythm rather than setting it. The per-condition error analysis (figure 16) shows how the best model's absolute error varies across weather categories and seasons. This matches the EDA: demand rises with temperature, falls with humidity, and declines as weather worsens (categories 1→3).
+Temperature, humidity, weather category, and season form the next tier of importance. They modulate demand around the dominant daily rhythm rather than setting it. The per-condition error analysis (figure 16) shows how the best model's absolute error varies across weather categories and seasons. This matches the EDA: demand rises with temperature, falls with humidity, and declines as weather worsens (categories 1→3). The bivariate EDA (figures 19-20) sharpens the picture: temperature lifts demand mainly when humidity is low — the warm, dry band carries the highest mean count — and weather's drag is not uniform, biting hardest during commute hours and varying by season.
+
+### Where the model errs (demand level and commute hours)
+
+Stratifying the best model's held-out residuals by demand level (figure 21) shows error scales with demand: RMSE climbs from about 10 count units in the lowest-demand quintile to about 79 in the highest, and the mean bias turns negative at the top (about -35), i.e. the model slightly under-predicts the busiest hours — expected given the `log1p` target and the high variance of peak demand. The hour × workingday error heatmap (figure 22) localizes those errors to the working-day commute peaks, while the flat overnight hours are predicted almost perfectly. This is the error-side confirmation of the temporal story above.
 
 ### Sequential-data objective
 
