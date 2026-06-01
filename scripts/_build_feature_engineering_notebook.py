@@ -86,9 +86,10 @@ plt.show()
 
 HOUR_INTERACTION_CODE = """\
 # Mean count at every hour, split by workingday. The Phase 2 EDA showed
-# this interaction was the strongest temporal signal. Cyclic terms
-# preserve hour wrap-around, but the two distinct workingday curves
-# require richer Ridge features or interactions to be evaluated in Phase 4.
+# this interaction was the strongest temporal signal. First-harmonic cyclic
+# terms preserve hour wrap-around but cannot express the two distinct
+# workingday curves; the workingday-gated cyclic terms added later
+# (feature experiment) encode exactly this for the linear model.
 mean_by_hour_workday = (
     df.groupby(["hour", "workingday"], as_index=False)["count"].mean()
 )
@@ -143,9 +144,12 @@ CELLS = [
     new_markdown_cell(
         "## 1. Apply `build_features` to the training frame\n"
         "\n"
-        "Confirms that nine new columns are added with sensible dtypes and "
-        "ranges. `datetime` is preserved so the same pipeline can later "
-        "be applied to the test set and label its predictions."
+        "Confirms the engineered columns are added with sensible dtypes and "
+        "ranges: the calendar/time features, the cyclic encodings (including "
+        "the second-harmonic `hour_sin2`/`hour_cos2`), and the "
+        "workingday-gated cyclic terms `hour_sin_workday`/`hour_cos_workday`. "
+        "`datetime` is preserved so the same pipeline can later be applied to "
+        "the test set and label its predictions."
     ),
     new_code_cell(BUILD_CODE),
     new_markdown_cell(
@@ -186,14 +190,18 @@ CELLS = [
         "- The hour × workingday interaction shows two distinct hourly "
         "shapes: a sharp morning + evening double-peak on working days "
         "and a smoother single afternoon peak on non-working days. Tree "
-        "models can pick this up from raw `hour` + `workingday`. Ridge "
-        "with only additive `hour_sin`, `hour_cos`, `workingday` cannot "
-        "represent two different hourly curves at once.\n"
-        "- Phase 4 will therefore compare, for the linear model: `hour` "
-        "one-hot, an explicit `hour × workingday` interaction term, and "
-        "additional Fourier harmonics. The current cyclic columns are a "
-        "starting point, not a finished solution.\n"
-        "- Among the new features, `hour`, `year`, and the cyclic columns "
+        "models can pick this up from raw `hour` + `workingday`. To give "
+        "the linear model a fair shot at it, the feature set now includes "
+        "a second hour harmonic (`hour_sin2`, `hour_cos2`) and "
+        "workingday-gated cyclic terms (`hour_sin_workday`, "
+        "`hour_cos_workday`).\n"
+        "- Those additions came from the gated experiment in "
+        "`docs/experiments/2026-06-01_leakage-safe-feature-sweep.md`, which "
+        "promoted this interaction/second-harmonic group (it cut Ridge "
+        "holdout RMSLE 0.91 -> 0.72 with no tree regression) and dropped "
+        "the candidates that did not clear the bar (peaks, environmental "
+        "products, year flag).\n"
+        "- Among the features, `hour`, `year`, and the cyclic columns "
         "show the strongest single-feature correlations with `count`. "
         "`is_weekend` is weakly correlated because `workingday` already "
         "captures most weekend behavior.\n"
