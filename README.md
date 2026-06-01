@@ -84,13 +84,13 @@ Day-of-month holdout (all four metrics):
 
 | Model | RMSLE | RMSE | MAE | R² | CV RMSLE |
 |---|---|---|---|---|---|
-| Mean baseline | 1.531 | 183.1 | 142.6 | -0.00 | 1.402 |
+| XGBoost | 0.306 | 47.5 | 28.0 | 0.93 | 0.463 |
+| Gradient Boosting | 0.312 | 51.7 | 31.0 | 0.92 | 0.453 |
+| Random Forest | 0.328 | 51.8 | 29.9 | 0.92 | 0.515 |
+| Ridge (cyclic + log1p) | 0.718 | 140.8 | 89.1 | 0.41 | 0.806 |
 | Hourly-mean baseline | 0.755 | 125.9 | 86.1 | 0.53 | 0.739 |
-| Ridge (cyclic + log1p) | 0.906 | 162.2 | 106.2 | 0.21 | 0.987 |
-| Random Forest | 0.330 | 51.9 | 30.4 | 0.92 | 0.514 |
-| Gradient Boosting | 0.334 | 59.0 | 36.5 | 0.90 | 0.471 |
-| XGBoost | 0.309 | 46.5 | 27.6 | 0.94 | 0.447 |
+| Mean baseline | 1.531 | 183.1 | 142.6 | -0.00 | 1.402 |
 
-The tree models change the picture: Random Forest, Gradient Boosting, and XGBoost beat every baseline and Ridge on all metrics and both validation views (holdout R² ~0.90+), because they capture the `hour × workingday` interaction non-linearly using the full feature set that the linear model had to drop. XGBoost is the strongest (holdout RMSLE 0.31, R² 0.94), with the three trees close to each other. Ridge still trails the simple hour-of-day average — first-harmonic cyclic features cannot represent the bimodal commuter pattern. Feature importance is dominated by the temporal signal (hour, workingday, year), with environmental inputs (temperature, humidity, weather, season) as a real but secondary tier. The test-set `datetime,count` prediction artifact is produced from a trained model by `scripts/generate_submission.py`.
+The tree models change the picture: Random Forest, Gradient Boosting, and XGBoost beat every baseline and Ridge on all metrics and both validation views (holdout R² ~0.92), because they capture the `hour × workingday` interaction non-linearly using the full feature set. XGBoost is the strongest (holdout RMSLE 0.31, R² 0.93), with the three trees close to each other. The Ridge row reflects the feature experiment in `docs/experiments/2026-06-01_leakage-safe-feature-sweep.md`: adding second-harmonic and workingday-gated cyclic features cut its holdout RMSLE from 0.91 to 0.72, enough to edge past the hourly-mean baseline — a linear-baseline / explainability gain that leaves the deployed XGBoost and the model ranking unchanged. Feature importance is dominated by the temporal signal (hour, workingday, year), with environmental inputs (temperature, humidity, weather, season) as a real but secondary tier. The test-set `datetime,count` prediction artifact is produced from a trained model by `scripts/generate_submission.py`.
 
 **The full written results report is [`reports/RESULTS.md`](reports/RESULTS.md)** — the project's headline deliverable. It consolidates this comparison with the best model's out-of-sample error analysis (`notebooks/05_results_and_interpretation.ipynb`, figures 14-16) and reads the results against the proposal's environmental, temporal, and sequential-data questions, including why target-lag features were deliberately excluded for leakage safety.
