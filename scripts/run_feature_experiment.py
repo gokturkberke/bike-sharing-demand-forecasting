@@ -9,8 +9,15 @@ promotion decision recorded in the plan file.
 
 Run from project root:
     .venv/bin/python scripts/run_feature_experiment.py
+
+Note: the committed JSON next to the plan file is the ORIGINAL pre-promotion
+ablation (baseline Ridge 0.9055, with the interaction_harmonic group still a
+candidate). After promotion this script measures a different thing - the
+remaining candidates on top of the now-richer production baseline - so it
+refuses to overwrite that historical record unless run with ``--force``.
 """
 
+import argparse
 import json
 from pathlib import Path
 
@@ -61,7 +68,14 @@ def _model_for(name, cfg, params, extra_cols):
     return build_experimental_ridge(cfg, params, extra_numeric, extra_pass)
 
 
-def main() -> None:
+def main(force: bool = False) -> None:
+    if OUT_PATH.exists() and not force:
+        raise FileExistsError(
+            f"{OUT_PATH.relative_to(PROJECT_ROOT)} already exists - it is the "
+            "committed pre-promotion ablation record. Re-running now measures a "
+            "different baseline; pass --force only if you intend to overwrite it."
+        )
+
     cfg = load_config(PROJECT_ROOT / "config" / "config.yaml")
     model_params = load_models_config(PROJECT_ROOT / "config" / "models.yaml")
     datetime_col = cfg["datetime_col"]
@@ -113,4 +127,11 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Leakage-safe feature sweep.")
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite the existing (historical) sweep JSON.",
+    )
+    args = parser.parse_args()
+    main(force=args.force)

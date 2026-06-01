@@ -58,8 +58,25 @@ def build_features(df: pd.DataFrame, cfg: dict[str, Any]) -> pd.DataFrame:
     ``datetime``, ``casual``, ``registered``, or ``count`` — leakage
     exclusion is the job of ``preprocessing.drop_leakage_columns`` and
     the target column lives until fit time.
+
+    Requires an already-parsed datetime column (``cfg["datetime_col"]``) and
+    ``workingday`` (used by the workingday-gated cyclic terms); both are
+    present in the raw Kaggle train and test frames. Missing or unparsed
+    inputs raise rather than fail with an opaque ``KeyError``/``.dt`` error.
     """
     datetime_col = cfg["datetime_col"]
+    required = {datetime_col, "workingday"}
+    missing = required - set(df.columns)
+    if missing:
+        raise ValueError(
+            f"build_features requires columns {sorted(required)}; "
+            f"missing: {sorted(missing)}."
+        )
+    if not pd.api.types.is_datetime64_any_dtype(df[datetime_col]):
+        raise TypeError(
+            f"build_features expects {datetime_col!r} already parsed to "
+            "datetime (load it via data.load_raw_train / load_raw_test)."
+        )
     out = df.copy()
     ts = out[datetime_col]
 

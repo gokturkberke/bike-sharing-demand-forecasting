@@ -4,6 +4,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from bike_sharing.features import build_features
 from bike_sharing.models import (
     HourlyMeanBaseline,
     MeanBaseline,
@@ -123,10 +124,13 @@ def test_ridge_inverse_clips_negative_predictions(cfg):
 
 
 def _tree_feature_frame(n=300, seed=0):
-    # The full feature set the tree models consume (raw ordinals kept).
+    # Mirror the production tree feature set by running build_features, so this
+    # frame tracks features.py (including the promoted second-harmonic and
+    # workingday-gated columns) instead of drifting from a hand-written list.
     rng = np.random.default_rng(seed)
-    X = pd.DataFrame(
+    raw = pd.DataFrame(
         {
+            "datetime": pd.date_range("2011-01-01", periods=n, freq="h"),
             "season": rng.integers(1, 5, size=n),
             "holiday": rng.integers(0, 2, size=n),
             "workingday": rng.integers(0, 2, size=n),
@@ -135,17 +139,9 @@ def _tree_feature_frame(n=300, seed=0):
             "atemp": rng.uniform(0, 45, size=n),
             "humidity": rng.uniform(0, 100, size=n),
             "windspeed": rng.uniform(0, 50, size=n),
-            "hour": rng.integers(0, 24, size=n),
-            "dayofweek": rng.integers(0, 7, size=n),
-            "month": rng.integers(1, 13, size=n),
-            "year": rng.integers(2011, 2013, size=n),
-            "is_weekend": rng.integers(0, 2, size=n),
-            "hour_sin": rng.uniform(-1, 1, size=n),
-            "hour_cos": rng.uniform(-1, 1, size=n),
-            "month_sin": rng.uniform(-1, 1, size=n),
-            "month_cos": rng.uniform(-1, 1, size=n),
         }
     )
+    X = build_features(raw, {"datetime_col": "datetime"}).drop(columns=["datetime"])
     y = np.abs(rng.normal(loc=100, scale=40, size=n))
     return X, y
 
