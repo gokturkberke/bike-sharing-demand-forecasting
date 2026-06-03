@@ -29,7 +29,9 @@ def r2(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     ss_res = np.sum((y_pred - y_true) ** 2)
     ss_tot = np.sum((y_true - y_true.mean()) ** 2)
     if ss_tot == 0.0:
-        return 0.0
+        # Zero-variance target: R2 is 0/0. Follow sklearn's r2_score
+        # convention - a perfect prediction is 1.0, anything else 0.0.
+        return 1.0 if np.allclose(y_true, y_pred) else 0.0
     return float(1.0 - ss_res / ss_tot)
 
 

@@ -27,14 +27,16 @@ from bike_sharing.train import evaluate_holdout, fit_and_cv
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_CONFIG_PATH = PROJECT_ROOT / "config" / "config.yaml"
-DEFAULT_MODELS_CONFIG_PATH = PROJECT_ROOT / "config" / "models.yaml"
 
 
 def main(model_name: str, config_path: Path = DEFAULT_CONFIG_PATH) -> None:
     cfg = load_config(config_path)
     target = cfg["target"]
     datetime_col = cfg["datetime_col"]
-    params = load_models_config(DEFAULT_MODELS_CONFIG_PATH).get(model_name, {})
+    # models.yaml lives next to whatever config.yaml was passed, so an
+    # alternative config directory keeps its paired hyperparameters.
+    models_config_path = Path(config_path).resolve().parent / "models.yaml"
+    params = load_models_config(models_config_path).get(model_name, {})
 
     train_path = Path(cfg["paths"]["processed_dir"]) / "train.parquet"
     if not train_path.exists():

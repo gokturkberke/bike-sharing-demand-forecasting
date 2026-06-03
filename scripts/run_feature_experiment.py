@@ -81,12 +81,10 @@ def main(force: bool = False) -> None:
     datetime_col = cfg["datetime_col"]
     target = cfg["target"]
 
-    cand = drop_leakage_columns(build_candidate_features(load_raw_train(cfg), cfg), cfg)
-    base_cols = [
-        c
-        for c in drop_leakage_columns(build_features(load_raw_train(cfg), cfg), cfg).columns
-        if c not in (target, datetime_col)
-    ]
+    raw = load_raw_train(cfg)
+    cand = drop_leakage_columns(build_candidate_features(raw, cfg), cfg)
+    base = drop_leakage_columns(build_features(raw, cfg), cfg)
+    base_cols = [c for c in base.columns if c not in (target, datetime_col)]
     y = cand[target].to_numpy(float)
     dt = cand[datetime_col]
     candidate_cols = [c for c in cand.columns if c not in base_cols + [target, datetime_col]]

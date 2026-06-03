@@ -29,6 +29,21 @@ def test_r2_mean_predictor_yields_zero():
     assert r2(y, pred) == pytest.approx(0.0)
 
 
+def test_r2_constant_target_perfect_prediction():
+    # Zero-variance target: a perfect prediction scores 1.0, matching
+    # sklearn's r2_score convention for the 0/0 degenerate case.
+    y = np.array([5.0, 5.0, 5.0])
+    assert r2(y, y) == pytest.approx(1.0)
+
+
+def test_r2_constant_target_imperfect_prediction():
+    # Zero-variance target with a wrong prediction stays 0.0; there is no
+    # variance to explain.
+    y_true = np.array([5.0, 5.0, 5.0])
+    y_pred = np.array([5.0, 6.0, 4.0])
+    assert r2(y_true, y_pred) == 0.0
+
+
 def test_rmsle_zero_on_perfect_predictions():
     y = np.array([0.0, 10.0, 100.0, 977.0])
     assert rmsle(y, y) == pytest.approx(0.0)
