@@ -36,7 +36,7 @@ Demand is driven first by time-of-day, and the daily shape differs sharply betwe
 
 - A linear model (Ridge) with only first-harmonic cyclic hour features **cannot** represent two peaks in one day, so it originally beat the global mean but lost to the trivial hour-of-day average (RMSLE 0.905 vs 0.755). The feature experiment (`docs/experiments/2026-06-01_leakage-safe-feature-sweep.md`) added a second hour harmonic and workingday-gated cyclic terms — a linear-safe encoding of the `hour × workingday` interaction — and Ridge fell to 0.718, just past the hourly-mean baseline. It is still far behind the trees, but it demonstrates that the bimodal shape, not linearity itself, was the linear model's binding constraint.
 - The tree/boosting models capture the interaction non-linearly and cut the error in half without any explicit interaction feature.
-- Feature importance is dominated by `hour` (and its cyclic encodings), `workingday`, and `year`. The residuals-by-hour figure for the best model (figure 15) hug zero across the whole day — the opposite of Ridge's hour-structured residuals in notebook 03.
+- Model-agnostic permutation importance on the holdout (figure 23), scored with count-scale RMSLE, confirms and sharpens the story: `hour` dominates by a wide margin, followed by the engineered cyclic terms — the second harmonic `hour_sin2` and the workingday-gated `hour_sin_workday`/`hour_cos_workday` — together with `hour_cos`, `hour_sin`, and `year`; the environmental inputs (humidity, weather, temp, season) sit a clear tier below. The contrast with the impurity ranking (figure 13) is instructive: the raw `workingday` and `is_weekend` flags fall near the bottom under permutation importance — impurity rates `is_weekend` highly, but shuffling it barely moves held-out error because the workingday-gated cyclic features already carry that signal. The residuals-by-hour figure for the best model (figure 15) hug zero across the whole day — the opposite of Ridge's hour-structured residuals in notebook 03.
 
 ### Environmental impact (a real but secondary signal)
 
@@ -53,7 +53,7 @@ The proposal raised a sequential-analysis goal (target lags such as `count(t-1)`
 ## Limitations
 
 - **Hyperparameters are sensible defaults, not tuned.** A tuning sweep would be a separate documented experiment; current values live in `config/models.yaml`.
-- **Feature importances are impurity-based** — a quick diagnostic, biased toward continuous/high-cardinality features and able to split correlated inputs (e.g. `temp`/`atemp`) arbitrarily. Permutation importance on the holdout is the stronger next step.
+- **Feature importance is reported two ways.** The impurity-based ranking (figure 13) is a quick in-training diagnostic but is biased toward continuous/high-cardinality features and can split credit between correlated inputs (e.g. `temp`/`atemp`). Holdout permutation importance (figure 23), scored with count-scale RMSLE, is the stronger, model-agnostic view and is now the primary importance evidence. Both share the usual caveat that importance among strongly correlated features (the `hour` family) can be distributed somewhat arbitrarily.
 - **`day`-of-month is intentionally excluded** as a feature because train (days 1-19) and test (days 20+) do not overlap on it; a schema-contract test enforces that train and test predictors stay identical.
 - **The three trees are statistically close**; the "best model" label should not be over-read.
 

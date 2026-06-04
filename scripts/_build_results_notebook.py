@@ -204,6 +204,33 @@ fig.savefig(FIG_DIR / "22_error_by_workingday_hour.png", dpi=120, bbox_inches="t
 plt.show()
 """
 
+PERM_IMPORTANCE_CODE = """\
+# Model-agnostic permutation importance for the best model, computed on the
+# day-of-month holdout (days 16-19) using the model fit on days 1-15 only
+# (`best`, refit above) - never the full-train models/*.joblib, which has
+# already seen these rows. Importance is scored with count-scale RMSLE (the
+# metric the models are judged on), so it is directly comparable to the
+# leaderboard and free of the impurity bias in notebook 04's figure 13.
+from bike_sharing.explain import rmsle_permutation_importance
+
+perm = rmsle_permutation_importance(
+    best, X.iloc[ho_idx], y[ho_idx], seed=CFG["seed"], n_repeats=10
+)
+
+fig, ax = plt.subplots(figsize=(8, 6))
+order = perm.sort_values("importance_mean")  # ascending so the top bar is largest
+ax.barh(
+    order["feature"], order["importance_mean"],
+    xerr=order["importance_std"], color="steelblue",
+)
+ax.set_title(f"{best_name}: permutation importance (holdout, count-scale RMSLE)")
+ax.set_xlabel("mean RMSLE increase when feature is shuffled")
+fig.tight_layout()
+fig.savefig(FIG_DIR / "23_permutation_importance.png", dpi=120, bbox_inches="tight")
+plt.show()
+perm.round(4)
+"""
+
 
 CELLS = [
     new_markdown_cell(
@@ -264,7 +291,21 @@ CELLS = [
     new_code_cell(ERROR_BY_QUANTILE_CODE),
     new_code_cell(ERROR_WORKINGDAY_HOUR_CODE),
     new_markdown_cell(
-        "## 5. Interpretation\n"
+        "## 5. Permutation importance (model-agnostic)\n"
+        "\n"
+        "Notebook 04's importances are impurity-based: a fast diagnostic, "
+        "but biased toward continuous/high-cardinality columns and free to "
+        "split importance arbitrarily between correlated inputs like "
+        "`temp`/`atemp`. Permutation importance instead measures the real "
+        "increase in held-out error when each feature is shuffled. It is "
+        "computed here on the held-out days 16-19 with the model fit only on "
+        "days 1-15, and scored with the same count-scale RMSLE used "
+        "everywhere else - an honest, model-agnostic view of what the "
+        "deployed model actually relies on."
+    ),
+    new_code_cell(PERM_IMPORTANCE_CODE),
+    new_markdown_cell(
+        "## 6. Interpretation\n"
         "\n"
         "**Temporal patterns (primary signal).** Demand is driven first "
         "by time-of-day, and the shape differs sharply between working "
@@ -278,8 +319,12 @@ CELLS = [
         "gain that confirms the bimodal shape was the binding constraint. "
         "The tree/boosting models capture the `hour × workingday` "
         "interaction non-linearly and roughly halve the error again. "
-        "Feature importance confirms `hour` (and its cyclic encodings), "
-        "`workingday`, and `year` dominate.\n"
+        "Holdout permutation importance (section 5, figure 23) puts `hour` "
+        "far ahead, followed by the engineered cyclic terms (`hour_sin2` "
+        "and the workingday-gated `hour_sin_workday`/`hour_cos_workday`), "
+        "then `hour_cos`, `hour_sin`, and `year`; the raw `workingday` flag "
+        "itself ranks low because the workingday-gated cyclic features "
+        "already carry that signal.\n"
         "\n"
         "**Environmental impact (secondary signal).** Temperature, "
         "humidity, weather category, and season form a real but secondary "
@@ -311,9 +356,11 @@ CELLS = [
         "wide margin.\n"
         "\n"
         "**Limitations.** Hyperparameters are sensible defaults, not "
-        "tuned; importances are impurity-based (a diagnostic, not causal); "
-        "and `day`-of-month was excluded because train and test do not "
-        "overlap on it. See `reports/RESULTS.md` for the written summary."
+        "tuned; impurity-based importances (figure 13) are a quick "
+        "diagnostic, complemented here by holdout permutation importance "
+        "(section 5, figure 23); and `day`-of-month was excluded because "
+        "train and test do not overlap on it. See `reports/RESULTS.md` for "
+        "the written summary."
     ),
 ]
 
