@@ -1,8 +1,4 @@
-# Model hyperparameters, separate from the pipeline config in config.yaml.
-# random_state is injected from config.yaml's `seed`, not set here.
-# These are sensible starting defaults, not the outcome of a tuning sweep;
-# a future hyperparameter study would record its chosen values here with an
-# inline comment pointing back to its docs/experiments/ plan file.
+# Model hyperparameters
 
 ridge:
   alpha: 1.0
