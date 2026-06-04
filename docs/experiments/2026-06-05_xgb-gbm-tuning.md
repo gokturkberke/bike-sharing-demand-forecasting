@@ -20,7 +20,7 @@
   - One bullet: the scorer wraps the existing `rmsle` (count scale, clips negatives); no new metric logic.
 - **Test / verification:** new test green; full `pytest` green.
 - **Expected outcome:** a reusable, tested scorer.
-- **DONE (commit `TBD-PHASE10`):** Added `rmsle_scorer()` to `src/bike_sharing/evaluate.py` (`make_scorer(rmsle, greater_is_better=False)`) and a sign-correctness contract to `tests/test_evaluate.py` (a closer fit scores higher; the score equals the negated count-scale RMSLE, not a log-space loss). `pytest` green (83 passed).
+- **DONE (commit `64e5d84`):** Added `rmsle_scorer()` to `src/bike_sharing/evaluate.py` (`make_scorer(rmsle, greater_is_better=False)`) and a sign-correctness contract to `tests/test_evaluate.py` (a closer fit scores higher; the score equals the negated count-scale RMSLE, not a log-space loss). `pytest` green (83 passed).
 
 ## 2) Add scripts/tune_model.py and run the search
 
@@ -34,7 +34,7 @@
   - Record baseline vs tuned holdout RMSLE/RMSE/MAE/R2, the CV-mean RMSLE, and the chosen params; print the per-model improvement.
 - **Test / verification:** sweep JSON produced; results table pasted below; the script touches no production config or `metrics.json`.
 - **Expected outcome:** decide per the promotion rule.
-- **DONE (commit `TBD-PHASE10`):** Added `scripts/tune_model.py` and ran it. The search ran on the day-of-month train subset only (8600 rows, days 1-15) with TimeSeriesSplit; the baseline column reproduced `reports/metrics.json` holdout exactly (xgb 0.3064, gbm 0.3120) - harness valid.
+- **DONE (commit `64e5d84`):** Added `scripts/tune_model.py` and ran it. The search ran on the day-of-month train subset only (8600 rows, days 1-15) with TimeSeriesSplit; the baseline column reproduced `reports/metrics.json` holdout exactly (xgb 0.3064, gbm 0.3120) - harness valid.
   - Metric / result (day-of-month holdout, baseline vs tuned; CV-mean RMSLE alongside):
 
     | model | holdout RMSLE | holdout RMSE | holdout MAE | holdout R2 | CV RMSLE |

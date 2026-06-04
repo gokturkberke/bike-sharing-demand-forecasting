@@ -1,0 +1,85 @@
+{
+  "model": "xgboost",
+  "theta": 1.0215,
+  "n_holdout": 2286,
+  "uncorrected": {
+    "overall": {
+      "rmsle": 0.3064,
+      "rmse": 47.5398,
+      "mae": 28.0005,
+      "r2": 0.9325
+    },
+    "by_quintile": [
+      {
+        "quantile": "(0.999, 29.0]",
+        "n": 460,
+        "rmse": 9.49,
+        "mean_bias": 0.97
+      },
+      {
+        "quantile": "(29.0, 107.0]",
+        "n": 459,
+        "rmse": 24.84,
+        "mean_bias": 1.94
+      },
+      {
+        "quantile": "(107.0, 198.0]",
+        "n": 459,
+        "rmse": 34.6,
+        "mean_bias": -2.29
+      },
+      {
+        "quantile": "(198.0, 332.0]",
+        "n": 456,
+        "rmse": 55.58,
+        "mean_bias": -4.78
+      },
+      {
+        "quantile": "(332.0, 943.0]",
+        "n": 452,
+        "rmse": 79.87,
+        "mean_bias": -32.93
+      }
+    ]
+  },
+  "smeared": {
+    "overall": {
+      "rmsle": 0.3053,
+      "rmse": 47.0814,
+      "mae": 27.6557,
+      "r2": 0.9338
+    },
+    "by_quintile": [
+      {
+        "quantile": "(0.999, 29.0]",
+        "n": 460,
+        "rmse": 9.72,
+        "mean_bias": 1.27
+      },
+      {
+        "quantile": "(29.0, 107.0]",
+        "n": 459,
+        "rmse": 25.46,
+        "mean_bias": 3.45
+      },
+      {
+        "quantile": "(107.0, 198.0]",
+        "n": 459,
+        "rmse": 35.2,
+        "mean_bias": 0.94
+      },
+      {
+        "quantile": "(198.0, 332.0]",
+        "n": 456,
+        "rmse": 56.5,
+        "mean_bias": 0.71
+      },
+      {
+        "quantile": "(332.0, 943.0]",
+        "n": 452,
+        "rmse": 77.31,
+        "mean_bias": -22.97
+      }
+    ]
+  }
+}
