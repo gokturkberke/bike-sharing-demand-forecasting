@@ -6,7 +6,7 @@ CMP4336 — Bike Sharing Demand Forecasting. This is the project's written resul
 
 Every model is scored on the original `count` scale with four metrics read **together** — RMSLE, RMSE, MAE, R² — and on **two** leakage-safe validation views:
 
-- **CV**: chronological `TimeSeriesSplit` (5 folds), simulating forecasting future months from past months.
+- **CV**: chronological `TimeSeriesSplit` (5 folds), simulating forecasting future months from past months. A robustness check (`docs/experiments/2026-06-04_validation-gap-diagnostics.md`, figure 24) confirms that inserting a ~48-hour chronological gap between folds barely moves the deployed XGBoost's CV RMSLE (+0.004) — expected, since the models use no lag features, so the CV estimate is not inflated by train/validation adjacency. (Ridge and gradient boosting are more gap-sensitive, but that traces to the smallest fold and the 2011→2012 year-boundary fold, not to leakage.)
 - **Day-of-month holdout**: train on days 1-15 of each month, validate on days 16-19. This mirrors the dataset's own train/test structure (labeled data covers days 1-19; the unlabeled test set is days 20+), so it is the more realistic generalization estimate.
 
 `casual` and `registered` are never used as features (they sum to `count` and are absent from the test set). The target is modeled as `log1p(count)` and inverted with `expm1` clipped at zero, so no prediction is ever negative.

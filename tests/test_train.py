@@ -87,3 +87,39 @@ def test_ridge_holdout_predictions_are_non_negative(cfg, featured):
     model = get_model("ridge", cfg).fit(X.iloc[train_idx], y[train_idx])
     preds = model.predict(X.iloc[holdout_idx])
     assert (preds >= 0).all()
+
+
+def _capture_timeseriessplit(monkeypatch):
+    """Replace train.TimeSeriesSplit with a spy that records its kwargs and
+    still delegates to the real splitter, so we can assert how fit_and_cv
+    constructs it."""
+    import bike_sharing.train as train_mod
+
+    captured: dict = {}
+    real = train_mod.TimeSeriesSplit
+
+    def spy(*args, **kwargs):
+        captured.update(kwargs)
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr(train_mod, "TimeSeriesSplit", spy)
+    return captured
+
+
+def test_fit_and_cv_passes_configured_gap(cfg, featured, monkeypatch):
+    # A configured cv.gap must reach TimeSeriesSplit (experiment:
+    # 2026-06-04_validation-gap-diagnostics.md).
+    captured = _capture_timeseriessplit(monkeypatch)
+    X, y, dt = featured
+    cfg_gap = {**cfg, "cv": {**cfg["cv"], "gap": 48}}
+    fit_and_cv(get_model("mean_baseline", cfg_gap), X, y, dt, cfg_gap)
+    assert captured["gap"] == 48
+
+
+def test_fit_and_cv_defaults_gap_to_zero(cfg, featured, monkeypatch):
+    # No gap key -> gap=0 (back-compatible; reproduces the recorded CV).
+    captured = _capture_timeseriessplit(monkeypatch)
+    X, y, dt = featured
+    cfg_no_gap = {**cfg, "cv": {"n_splits": cfg["cv"]["n_splits"]}}
+    fit_and_cv(get_model("mean_baseline", cfg_no_gap), X, y, dt, cfg_no_gap)
+    assert captured["gap"] == 0

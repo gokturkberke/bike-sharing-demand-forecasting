@@ -4,6 +4,10 @@ datetime_col: datetime
 
 cv:
   n_splits: 5
+  # experiment: 2026-06-04_validation-gap-diagnostics.md - chronological buffer
+  # (in samples; ~hours for hourly data) between TimeSeriesSplit train and
+  # validation folds. 0 = no gap, reproduces the recorded metrics.json CV.
+  gap: 0
 
 paths:
   raw_train: data/raw/train.csv

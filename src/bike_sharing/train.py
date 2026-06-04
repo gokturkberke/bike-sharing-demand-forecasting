@@ -41,15 +41,19 @@ def fit_and_cv(
     """Run ``TimeSeriesSplit`` cross-validation and return the metric summary.
 
     Rows are sorted by ``datetime_series`` before splitting so the train
-    fold always precedes its validation fold in time. The estimator is
-    cloned for each fold; the input ``model`` itself is left unfit.
+    fold always precedes its validation fold in time. An optional
+    ``cfg['cv']['gap']`` (default 0) inserts a chronological buffer, measured
+    in samples, between each train fold and its validation fold. The
+    estimator is cloned for each fold; the input ``model`` itself is left
+    unfit.
     """
     n_splits = int(cfg["cv"]["n_splits"])
+    gap = int(cfg["cv"].get("gap", 0))
     order = np.argsort(np.asarray(datetime_series.values))
     X_sorted = X.iloc[order].reset_index(drop=True)
     y_sorted = np.asarray(y)[order]
 
-    splitter = TimeSeriesSplit(n_splits=n_splits)
+    splitter = TimeSeriesSplit(n_splits=n_splits, gap=gap)
     fold_metrics: list[dict[str, float]] = []
 
     for train_idx, val_idx in splitter.split(X_sorted):

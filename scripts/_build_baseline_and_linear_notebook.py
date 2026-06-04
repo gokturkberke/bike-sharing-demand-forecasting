@@ -117,6 +117,38 @@ fig.savefig(FIG_DIR / "10_per_fold_rmsle.png", dpi=120, bbox_inches="tight")
 plt.show()
 """
 
+GAP_SENSITIVITY_CODE = """\
+# Validation robustness: does a chronological gap between TimeSeriesSplit
+# train and validation folds move the CV estimate? Reads the diagnostic from
+# scripts/run_gap_diagnostic.py (gap=0 vs gap=48 ~ 48h). The models use no
+# lag features, so a gap cannot remove target leakage; what it removes is
+# training rows temporally adjacent to each validation block. Skips with a
+# note if the diagnostic has not been run.
+gap_json = PROJECT_ROOT / "docs" / "experiments" / "2026-06-04_validation-gap-diagnostics.json"
+if not gap_json.exists():
+    print("gap diagnostic not found; run scripts/run_gap_diagnostic.py to populate figure 24.")
+else:
+    gd = json.loads(gap_json.read_text())
+    gaps = [str(g) for g in gd["gaps"]]
+    names = list(gd["models"])
+    xpos = np.arange(len(names))
+    width = 0.38
+    fig, ax = plt.subplots(figsize=(8, 4))
+    for j, g in enumerate(gaps):
+        vals = [gd["models"][n]["by_gap"][g]["rmsle"] for n in names]
+        ax.bar(xpos + (j - 0.5) * width, vals, width, label=f"gap={g}")
+    ax.set_xticks(xpos)
+    ax.set_xticklabels(names, rotation=20, ha="right")
+    ax.set_ylabel("CV-mean RMSLE")
+    ax.set_title("CV RMSLE sensitivity to TimeSeriesSplit gap (lower is better)")
+    ax.legend(title="gap (samples)")
+    fig.tight_layout()
+    fig.savefig(FIG_DIR / "24_cv_gap_sensitivity.png", dpi=120, bbox_inches="tight")
+    plt.show()
+    deltas = {n: gd["models"][n]["cv_rmsle_delta_gap48_minus_gap0"] for n in names}
+    print("CV RMSLE delta (gap48 - gap0):", deltas)
+"""
+
 RESIDUAL_CODE = """\
 # Out-of-sample residuals: fit Ridge on the early day-of-month rows
 # (1-15) and compute residuals on the held-out days (16-19) it never
@@ -196,7 +228,26 @@ CELLS = [
     ),
     new_code_cell(FOLD_BREAKDOWN_CODE),
     new_markdown_cell(
-        "## 4. Ridge out-of-sample residuals by hour\n"
+        "## 4. Validation robustness: chronological gap\n"
+        "\n"
+        "A `gap` in `TimeSeriesSplit` inserts a buffer (in samples, ~hours "
+        "for hourly data) between each train fold and its validation fold, so "
+        "the two never touch at the boundary "
+        "(`docs/experiments/2026-06-04_validation-gap-diagnostics.md`). Because "
+        "the models carry no lag/autoregressive features, a gap cannot remove "
+        "target leakage; it only removes training rows temporally adjacent to "
+        "each validation block. The deployed XGBoost and the random forest "
+        "barely move (CV RMSLE delta < 0.01), confirming the chronological CV "
+        "is not inflated by adjacency. Ridge and gradient boosting move more, "
+        "but that is localized to the smallest first fold (the linear model's "
+        "extrapolation fragility) and the 2011->2012 year-boundary fold (where "
+        "the dropped rows bridge a large level shift), not a uniform leakage "
+        "effect. We keep `gap=0` as the reported CV default; the day-of-month "
+        "holdout remains the primary view and is unaffected."
+    ),
+    new_code_cell(GAP_SENSITIVITY_CODE),
+    new_markdown_cell(
+        "## 5. Ridge out-of-sample residuals by hour\n"
         "\n"
         "First-harmonic cyclic features (`hour_sin`, `hour_cos`) plus "
         "`workingday` cannot represent two different hourly curves at once. "
