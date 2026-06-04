@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from bike_sharing.evaluate import mae, r2, report, rmse, rmsle
+from bike_sharing.evaluate import mae, r2, report, rmse, rmsle, rmsle_scorer
 
 
 def test_mae_zero_on_perfect_predictions():
@@ -65,3 +65,21 @@ def test_report_returns_full_metric_set():
     assert set(out) == {"rmsle", "rmse", "mae", "r2"}
     for value in out.values():
         assert isinstance(value, float)
+
+
+def test_rmsle_scorer_is_count_scale_and_sign_correct():
+    # Use real sklearn estimators so the scorer's tag machinery is satisfied.
+    from sklearn.dummy import DummyRegressor
+    from sklearn.linear_model import LinearRegression
+
+    rng = np.random.default_rng(0)
+    X = rng.uniform(0, 10, size=(60, 2))
+    y = 5.0 + 3.0 * X[:, 0] + X[:, 1]  # strictly positive, so RMSLE is defined
+    good = LinearRegression().fit(X, y)
+    weak = DummyRegressor(strategy="mean").fit(X, y)
+
+    scorer = rmsle_scorer()
+    # Exactly the negated count-scale RMSLE (not a log-space or R2 score).
+    assert scorer(good, X, y) == pytest.approx(-rmsle(y, good.predict(X)))
+    # greater_is_better=False: the better fit scores higher (less negative).
+    assert scorer(good, X, y) > scorer(weak, X, y)

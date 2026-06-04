@@ -12,6 +12,7 @@ negative number is NaN).
 from typing import Any
 
 import numpy as np
+from sklearn.metrics import make_scorer
 
 
 def mae(y_true: np.ndarray, y_pred: np.ndarray) -> float:
@@ -55,3 +56,15 @@ def report(y_true: np.ndarray, y_pred: np.ndarray) -> dict[str, float]:
         "mae": mae(y_true, y_pred),
         "r2": r2(y_true, y_pred),
     }
+
+
+def rmsle_scorer():
+    """A scikit-learn scorer wrapping :func:`rmsle` on the original count scale.
+
+    ``greater_is_better=False`` negates RMSLE, so a search that maximizes the
+    score (e.g. ``RandomizedSearchCV``) minimizes count-scale RMSLE - the same
+    metric the models are reported on, not a log-space loss or the default R2.
+    The estimator's ``predict`` must return original-scale counts (the
+    project's ``TransformedTargetRegressor`` does this).
+    """
+    return make_scorer(rmsle, greater_is_better=False)

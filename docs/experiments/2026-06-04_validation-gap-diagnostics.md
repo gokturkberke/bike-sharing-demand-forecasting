@@ -19,7 +19,7 @@
   - Note that `gap` is measured in **samples**; with hourly, datetime-sorted rows it is approximately `gap` hours within a contiguous run (month boundaries make it approximate).
 - **Test / verification:** new tests green; full `pytest` green; gap=0 path unchanged so existing CV contracts still pass.
 - **Expected outcome:** `fit_and_cv` honors `cv.gap`; default 0 is behavior-identical.
-- **DONE (commit pending):** Added `cv.gap` to `config/config.yaml` (default 0, with an `# experiment:` back-reference); `fit_and_cv` now reads `int(cfg['cv'].get('gap', 0))` and passes it to `TimeSeriesSplit(n_splits=..., gap=gap)`; added two contracts to `tests/test_train.py` (a monkeypatch spy proving `cv.gap=48` reaches the splitter, and a back-compat test that a missing key yields `gap=0`). `config.py` validation untouched. `pytest` green (82 passed); the gap=0 path is behavior-identical.
+- **DONE (commit `90f0445`):** Added `cv.gap` to `config/config.yaml` (default 0, with an `# experiment:` back-reference); `fit_and_cv` now reads `int(cfg['cv'].get('gap', 0))` and passes it to `TimeSeriesSplit(n_splits=..., gap=gap)`; added two contracts to `tests/test_train.py` (a monkeypatch spy proving `cv.gap=48` reaches the splitter, and a back-compat test that a missing key yields `gap=0`). `config.py` validation untouched. `pytest` green (82 passed); the gap=0 path is behavior-identical.
 
 ## 2) Run the gap=0 vs gap=48 ablation and record results
 
@@ -30,7 +30,7 @@
   - The gap=0 column must reproduce `reports/metrics.json` CV (a harness self-check, exactly as the feature sweep's baseline reproduced production).
 - **Test / verification:** sweep JSON produced; comparison table pasted below.
 - **Expected outcome:** decide per the decision rule above.
-- **DONE (commit pending):** Ran `scripts/run_gap_diagnostic.py`; the gap=0 column reproduced `reports/metrics.json` CV exactly for all four models (harness self-check passed).
+- **DONE (commit `90f0445`):** Ran `scripts/run_gap_diagnostic.py`; the gap=0 column reproduced `reports/metrics.json` CV exactly for all four models (harness self-check passed).
   - Metric / result (CV-mean RMSLE):
 
     | model | gap=0 | gap=48 | delta (gap48 - gap0) |
@@ -53,5 +53,5 @@
   - Keep `cv.gap: 0` as the default unless item 2 argues otherwise; the figure/sentence frame gap=48 as a robustness confirmation, noting the no-lag-feature reasoning.
 - **Test / verification:** notebook executes clean; figure 24 written; `pytest` green; `metrics.json` unchanged (no retrain needed since the default stays gap=0).
 - **Expected outcome:** the report carries an honest validation-robustness result; the production CV default is documented and unchanged.
-- **DONE (commit pending):** Added a "Validation robustness: chronological gap" cell to `scripts/_build_baseline_and_linear_notebook.py` that reads the diagnostic JSON and plots `reports/figures/24_cv_gap_sensitivity.png` (guarded - prints a note and skips if the JSON is absent); rebuilt and executed `notebooks/03_baseline_and_linear.ipynb`; added one sentence to `reports/RESULTS.md` under "How models were evaluated".
+- **DONE (commit `90f0445`):** Added a "Validation robustness: chronological gap" cell to `scripts/_build_baseline_and_linear_notebook.py` that reads the diagnostic JSON and plots `reports/figures/24_cv_gap_sensitivity.png` (guarded - prints a note and skips if the JSON is absent); rebuilt and executed `notebooks/03_baseline_and_linear.ipynb`; added one sentence to `reports/RESULTS.md` under "How models were evaluated".
   - Decision: keep `cv.gap: 0` as the production default. It is the standard TimeSeriesSplit, uses all rows, and reproduces the recorded `metrics.json`; the deployed model's CV is robust to the gap; the larger movements are explained boundary artifacts, not leakage; and the day-of-month holdout - the primary view - is unaffected and does not straddle a year boundary. `reports/metrics.json` unchanged (no retrain needed). The gap=48 run is retained as a documented robustness diagnostic.

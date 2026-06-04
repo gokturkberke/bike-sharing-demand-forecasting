@@ -1,0 +1,79 @@
+{
+  "search_rows_days_1_15": 8600,
+  "models": {
+    "xgboost": {
+      "baseline_params": {
+        "n_estimators": 400,
+        "learning_rate": 0.05,
+        "max_depth": 5,
+        "subsample": 0.9,
+        "colsample_bytree": 0.9
+      },
+      "best_params": {
+        "subsample": 0.8,
+        "reg_lambda": 2.0,
+        "n_estimators": 600,
+        "min_child_weight": 5,
+        "max_depth": 3,
+        "learning_rate": 0.1,
+        "colsample_bytree": 0.9
+      },
+      "baseline": {
+        "holdout": {
+          "rmsle": 0.3064,
+          "rmse": 47.5398,
+          "mae": 28.0005,
+          "r2": 0.9325
+        },
+        "cv_rmsle": 0.4633
+      },
+      "tuned": {
+        "holdout": {
+          "rmsle": 0.3056,
+          "rmse": 48.5394,
+          "mae": 28.6179,
+          "r2": 0.9297
+        },
+        "cv_rmsle": 0.4094
+      },
+      "holdout_rmsle_improvement": 0.0008,
+      "search_best_cv_rmsle": 0.3769
+    },
+    "gradient_boosting": {
+      "baseline_params": {
+        "n_estimators": 300,
+        "learning_rate": 0.05,
+        "max_depth": 3,
+        "subsample": 0.9
+      },
+      "best_params": {
+        "subsample": 0.8,
+        "n_estimators": 200,
+        "min_samples_leaf": 5,
+        "max_features": "sqrt",
+        "max_depth": 4,
+        "learning_rate": 0.1
+      },
+      "baseline": {
+        "holdout": {
+          "rmsle": 0.312,
+          "rmse": 51.6604,
+          "mae": 31.0468,
+          "r2": 0.9203
+        },
+        "cv_rmsle": 0.4528
+      },
+      "tuned": {
+        "holdout": {
+          "rmsle": 0.3143,
+          "rmse": 50.477,
+          "mae": 29.7848,
+          "r2": 0.9239
+        },
+        "cv_rmsle": 0.4143
+      },
+      "holdout_rmsle_improvement": -0.0023,
+      "search_best_cv_rmsle": 0.3813
+    }
+  }
+}

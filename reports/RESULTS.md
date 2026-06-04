@@ -52,7 +52,7 @@ The proposal raised a sequential-analysis goal (target lags such as `count(t-1)`
 
 ## Limitations
 
-- **Hyperparameters are sensible defaults, not tuned.** A tuning sweep would be a separate documented experiment; current values live in `config/models.yaml`.
+- **Hyperparameters are sensible defaults.** A RandomizedSearchCV tuning sweep (`docs/experiments/2026-06-05_xgb-gbm-tuning.md`, scored on count-scale RMSLE with the day-of-month holdout excluded from the search) did not beat them: the tuned params lowered the chronological CV RMSLE (XGBoost 0.46 → 0.41, gradient boosting 0.45 → 0.41), but that gain did not transfer to the held-out days 16-19 (XGBoost flat on RMSLE with slightly worse RMSE/MAE/R², gradient boosting marginally worse on RMSLE), so the defaults were kept. Current values live in `config/models.yaml`.
 - **Feature importance is reported two ways.** The impurity-based ranking (figure 13) is a quick in-training diagnostic but is biased toward continuous/high-cardinality features and can split credit between correlated inputs (e.g. `temp`/`atemp`). Holdout permutation importance (figure 23), scored with count-scale RMSLE, is the stronger, model-agnostic view and is now the primary importance evidence. Both share the usual caveat that importance among strongly correlated features (the `hour` family) can be distributed somewhat arbitrarily.
 - **`day`-of-month is intentionally excluded** as a feature because train (days 1-19) and test (days 20+) do not overlap on it; a schema-contract test enforces that train and test predictors stay identical.
 - **The three trees are statistically close**; the "best model" label should not be over-read.

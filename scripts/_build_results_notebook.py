@@ -355,12 +355,15 @@ CELLS = [
         "only just edges it, and only the non-linear models beat it by a "
         "wide margin.\n"
         "\n"
-        "**Limitations.** Hyperparameters are sensible defaults, not "
-        "tuned; impurity-based importances (figure 13) are a quick "
-        "diagnostic, complemented here by holdout permutation importance "
-        "(section 5, figure 23); and `day`-of-month was excluded because "
-        "train and test do not overlap on it. See `reports/RESULTS.md` for "
-        "the written summary."
+        "**Limitations.** Hyperparameters are sensible defaults; a "
+        "RandomizedSearchCV sweep "
+        "(`docs/experiments/2026-06-05_xgb-gbm-tuning.md`) lowered the CV "
+        "RMSLE but did not transfer to the day-of-month holdout, so the "
+        "defaults were kept. Impurity-based importances (figure 13) are a "
+        "quick diagnostic, complemented here by holdout permutation "
+        "importance (section 5, figure 23); and `day`-of-month was excluded "
+        "because train and test do not overlap on it. See "
+        "`reports/RESULTS.md` for the written summary."
     ),
 ]
 
