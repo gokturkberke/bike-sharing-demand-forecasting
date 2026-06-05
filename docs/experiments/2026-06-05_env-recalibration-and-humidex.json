@@ -1,0 +1,174 @@
+{
+  "arms": [
+    "baseline",
+    "comfort",
+    "recalib",
+    "all"
+  ],
+  "models": {
+    "ridge": {
+      "baseline": {
+        "cv_rmsle": 0.8064,
+        "holdout": {
+          "rmsle": 0.7184,
+          "rmse": 140.8113,
+          "mae": 89.0637,
+          "r2": 0.408
+        }
+      },
+      "comfort": {
+        "cv_rmsle": 0.8026,
+        "holdout": {
+          "rmsle": 0.7163,
+          "rmse": 140.0966,
+          "mae": 88.7779,
+          "r2": 0.414
+        },
+        "holdout_rmsle_improvement": 0.0021
+      },
+      "recalib": {
+        "cv_rmsle": 0.8066,
+        "holdout": {
+          "rmsle": 0.7088,
+          "rmse": 139.2258,
+          "mae": 88.3176,
+          "r2": 0.4212
+        },
+        "holdout_rmsle_improvement": 0.0096
+      },
+      "all": {
+        "cv_rmsle": 0.8052,
+        "holdout": {
+          "rmsle": 0.7064,
+          "rmse": 138.5307,
+          "mae": 87.9248,
+          "r2": 0.427
+        },
+        "holdout_rmsle_improvement": 0.012
+      }
+    },
+    "random_forest": {
+      "baseline": {
+        "cv_rmsle": 0.5147,
+        "holdout": {
+          "rmsle": 0.3284,
+          "rmse": 51.8046,
+          "mae": 29.9092,
+          "r2": 0.9199
+        }
+      },
+      "comfort": {
+        "cv_rmsle": 0.5158,
+        "holdout": {
+          "rmsle": 0.3275,
+          "rmse": 51.1819,
+          "mae": 29.752,
+          "r2": 0.9218
+        },
+        "holdout_rmsle_improvement": 0.0009
+      },
+      "recalib": {
+        "cv_rmsle": 0.5171,
+        "holdout": {
+          "rmsle": 0.3232,
+          "rmse": 50.5746,
+          "mae": 28.8894,
+          "r2": 0.9236
+        },
+        "holdout_rmsle_improvement": 0.0052
+      },
+      "all": {
+        "cv_rmsle": 0.519,
+        "holdout": {
+          "rmsle": 0.3236,
+          "rmse": 50.1915,
+          "mae": 28.8417,
+          "r2": 0.9248
+        },
+        "holdout_rmsle_improvement": 0.0048
+      }
+    },
+    "gradient_boosting": {
+      "baseline": {
+        "cv_rmsle": 0.4528,
+        "holdout": {
+          "rmsle": 0.312,
+          "rmse": 51.6604,
+          "mae": 31.0468,
+          "r2": 0.9203
+        }
+      },
+      "comfort": {
+        "cv_rmsle": 0.4559,
+        "holdout": {
+          "rmsle": 0.312,
+          "rmse": 51.3843,
+          "mae": 30.7182,
+          "r2": 0.9212
+        },
+        "holdout_rmsle_improvement": 0.0
+      },
+      "recalib": {
+        "cv_rmsle": 0.4525,
+        "holdout": {
+          "rmsle": 0.3121,
+          "rmse": 49.9299,
+          "mae": 30.0964,
+          "r2": 0.9256
+        },
+        "holdout_rmsle_improvement": -0.0001
+      },
+      "all": {
+        "cv_rmsle": 0.4545,
+        "holdout": {
+          "rmsle": 0.312,
+          "rmse": 50.411,
+          "mae": 30.1901,
+          "r2": 0.9241
+        },
+        "holdout_rmsle_improvement": 0.0
+      }
+    },
+    "xgboost": {
+      "baseline": {
+        "cv_rmsle": 0.4633,
+        "holdout": {
+          "rmsle": 0.3064,
+          "rmse": 47.5398,
+          "mae": 28.0005,
+          "r2": 0.9325
+        }
+      },
+      "comfort": {
+        "cv_rmsle": 0.4636,
+        "holdout": {
+          "rmsle": 0.3084,
+          "rmse": 47.664,
+          "mae": 28.0321,
+          "r2": 0.9322
+        },
+        "holdout_rmsle_improvement": -0.002
+      },
+      "recalib": {
+        "cv_rmsle": 0.4629,
+        "holdout": {
+          "rmsle": 0.3038,
+          "rmse": 45.8606,
+          "mae": 27.1126,
+          "r2": 0.9372
+        },
+        "holdout_rmsle_improvement": 0.0026
+      },
+      "all": {
+        "cv_rmsle": 0.4532,
+        "holdout": {
+          "rmsle": 0.3019,
+          "rmse": 45.7962,
+          "mae": 26.9779,
+          "r2": 0.9374
+        },
+        "holdout_rmsle_improvement": 0.0045
+      }
+    }
+  }
+}

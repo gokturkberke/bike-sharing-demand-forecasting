@@ -173,6 +173,16 @@ def test_candidate_features_train_test_parity(cfg):
     )
 
 
+def test_comfort_index_finite_varies_and_experiment_only(candidate_train):
+    # The Humidex comfort index must be a finite, varying candidate numeric -
+    # and must not leak into the production feature set.
+    vals = candidate_train["comfort_index"].to_numpy()
+    assert np.isfinite(vals).all()
+    assert np.ptp(vals) > 0  # not a constant column
+    assert "comfort_index" in CANDIDATE_NUMERIC_COLUMNS
+    assert "comfort_index" not in ADDED_FEATURE_COLUMNS
+
+
 def test_cyclic_encoding_continuity():
     # Hour 23 should be adjacent to hour 0 in the sin/cos space; this is
     # the whole reason for the cyclic encoding.

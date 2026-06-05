@@ -21,7 +21,7 @@
   - `tests/test_postprocess.py`: assert `compute_smearing_factor` equals `mean(exp(residuals))` on a fixture; assert `apply_smearing` matches the **exact** formula on a hand-computed fixture, clips negatives to 0, and is **not** equal to the incorrect `theta*expm1(log_pred)` form. Must **not** assume `theta >= 1`.
 - **Test / verification:** new tests green; full `pytest` green.
 - **Expected outcome:** a reusable, exact, non-negative smearing correction.
-- **DONE (commit pending):** Added `src/bike_sharing/postprocess.py` (`compute_smearing_factor`, `apply_smearing`) and `tests/test_postprocess.py` (exact-formula fixture; clips negatives to 0; `theta < 1` allowed; distinct from the wrong `theta*expm1` form; `theta=1` no-op). `pytest` green (87 passed).
+- **DONE (commit `bf8b719`):** Added `src/bike_sharing/postprocess.py` (`compute_smearing_factor`, `apply_smearing`) and `tests/test_postprocess.py` (exact-formula fixture; clips negatives to 0; `theta < 1` allowed; distinct from the wrong `theta*expm1` form; `theta=1` no-op). `pytest` green (87 passed).
 
 ## 2) Run the smearing experiment on the day-of-month holdout
 
@@ -33,7 +33,7 @@
   - Report overall RMSLE/RMSE/MAE/R2 (uncorrected vs smeared) and, stratified by holdout demand quintile, RMSE and mean bias for both; record `theta`.
 - **Test / verification:** sweep JSON produced; table pasted below; the script touches no production config, model artifact, or prediction path.
 - **Expected outcome:** decide per the decision rule.
-- **DONE (commit pending):** Added `scripts/run_peak_experiment.py` and ran it. theta = 1.0215 (a ~2% upward correction). The uncorrected column reproduced the production XGBoost holdout exactly (RMSLE 0.3064, RMSE 47.54, MAE 28.00, R2 0.9325) - harness valid.
+- **DONE (commit `bf8b719`):** Added `scripts/run_peak_experiment.py` and ran it. theta = 1.0215 (a ~2% upward correction). The uncorrected column reproduced the production XGBoost holdout exactly (RMSLE 0.3064, RMSE 47.54, MAE 28.00, R2 0.9325) - harness valid.
   - Metric / result (day-of-month holdout, uncorrected vs smeared):
 
     | metric | uncorrected | smeared |
@@ -55,4 +55,4 @@
 - **Files (only if the guardrail clears):** wire smearing into the production prediction path behind a config flag (default off) - `theta` computed at train time in `scripts/train_model.py` and applied in `predict.make_prediction_frame`; this plumbing is designed in full only if item 2 clears the bar (avoid speculative production changes).
 - **Test / verification:** `pytest` green; if wired, a `predict` contract that smearing is off by default and that the artifact stays non-negative `datetime,count` with 6493 rows.
 - **Expected outcome:** if smearing clears the bar, it ships config-gated; otherwise it stays a documented, tested, off-by-default capability and the tradeoff is recorded. Production prediction default is explicit either way.
-- **DONE (commit pending):** Decision = **document-only** (user-chosen). Smearing clears the guardrail, but the all-metric gain is small and within plausible single-split noise, so it is **not** wired into the production prediction path: `config/config.yaml`, `predict.py`, `reports/metrics.json`, the saved estimators, and the notebooks/figures all stay tied to the plain model. Smearing ships as a tested, documented correction (`src/bike_sharing/postprocess.py`) plus a finding added to `reports/RESULTS.md` ("Where the model errs"): the peak underprediction is a correctable `log1p` retransformation bias (theta ~1.02, ~30% top-quintile bias reduction), not a modeling failure. Production wiring was deliberately declined in favor of the leanest honest outcome.
+- **DONE (commit `bf8b719`):** Decision = **document-only** (user-chosen). Smearing clears the guardrail, but the all-metric gain is small and within plausible single-split noise, so it is **not** wired into the production prediction path: `config/config.yaml`, `predict.py`, `reports/metrics.json`, the saved estimators, and the notebooks/figures all stay tied to the plain model. Smearing ships as a tested, documented correction (`src/bike_sharing/postprocess.py`) plus a finding added to `reports/RESULTS.md` ("Where the model errs"): the peak underprediction is a correctable `log1p` retransformation bias (theta ~1.02, ~30% top-quintile bias reduction), not a modeling failure. Production wiring was deliberately declined in favor of the leanest honest outcome.

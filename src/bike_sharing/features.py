@@ -112,8 +112,9 @@ def build_features(df: pd.DataFrame, cfg: dict[str, Any]) -> pd.DataFrame:
 # products regressed the trees, the year flag was marginal). They are kept
 # so scripts/run_feature_experiment.py stays reproducible. All are
 # leakage-safe and computable on train and test alike, split by how the
-# experimental Ridge routes them (scaled numeric vs passthrough).
-CANDIDATE_NUMERIC_COLUMNS = ("feels_like_gap", "temp_humidity_interaction")
+# experimental Ridge routes them (scaled numeric vs passthrough). comfort_index
+# is a later candidate from docs/experiments/2026-06-05_env-recalibration-and-humidex.md.
+CANDIDATE_NUMERIC_COLUMNS = ("feels_like_gap", "temp_humidity_interaction", "comfort_index")
 CANDIDATE_PASSTHROUGH_COLUMNS = (
     "is_morning_peak",
     "is_evening_peak",
@@ -141,6 +142,18 @@ def build_candidate_features(df: pd.DataFrame, cfg: dict[str, Any]) -> pd.DataFr
     out["is_2012"] = (out["year"] == 2012).astype("int8")
     out["feels_like_gap"] = (out["atemp"] - out["temp"]).astype("float32")
     out["temp_humidity_interaction"] = (out["temp"] * out["humidity"]).astype("float32")
+    # Humidex-style comfort index: temperature plus the humidity-driven heat
+    # contribution, a single felt-temperature signal. Pointwise/closed-form,
+    # so it is a candidate feature (not a fitted transform).
+    out["comfort_index"] = (
+        out["temp"]
+        + (5.0 / 9.0)
+        * (
+            6.11 * np.exp(17.27 * out["temp"] / (237.7 + out["temp"]))
+            * out["humidity"] / 100.0
+            - 10.0
+        )
+    ).astype("float32")
     out["bad_weather"] = (out["weather"] >= 3).astype("int8")
 
     return out
