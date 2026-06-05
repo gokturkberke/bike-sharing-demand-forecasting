@@ -18,7 +18,7 @@
   - `tests/test_dual_target.py` (new): `dual_target_split` excludes `count`/`casual`/`registered` from `X`; `fit_and_predict_dual_target` returns a non-negative prediction equal to casual_pred + registered_pred; the evaluation returns the four-metric set on both views.
 - **Test / verification:** new tests green; full `pytest` green.
 - **Expected outcome:** a tested, leakage-safe dual-target evaluator that reuses the project's split + metric primitives.
-- **DONE (commit pending):** Added `src/bike_sharing/dual_target.py` (`dual_target_split`, `fit_and_predict_dual_target`, `evaluate_dual_target`) and `tests/test_dual_target.py` (X excludes count/casual/registered; the prediction is non-negative and equals the two component models' sum; the evaluation returns the four-metric set on both views). `pytest` green (96 passed).
+- **DONE (commit `ca4c913`):** Added `src/bike_sharing/dual_target.py` (`dual_target_split`, `fit_and_predict_dual_target`, `evaluate_dual_target`) and `tests/test_dual_target.py` (X excludes count/casual/registered; the prediction is non-negative and equals the two component models' sum; the evaluation returns the four-metric set on both views). `pytest` green (96 passed).
 
 ## 2) Run the dual-target comparison
 
@@ -29,7 +29,7 @@
   - The script touches no production config, model artifact, or `metrics.json`.
 - **Test / verification:** JSON produced; results table pasted into item 3.
 - **Expected outcome:** per the decision rule.
-- **DONE (commit pending):** Ran `scripts/train_dual_target.py` for xgboost and gradient_boosting; direct-count figures pulled from `reports/metrics.json`.
+- **DONE (commit `ca4c913`):** Ran `scripts/train_dual_target.py` for xgboost and gradient_boosting; direct-count figures pulled from `reports/metrics.json`.
   - Metric / result (day-of-month holdout, direct-count vs dual-target; CV-mean RMSLE alongside):
 
     | model | RMSLE | RMSE | MAE | R2 | CV RMSLE |
@@ -50,4 +50,4 @@
 - **Files (only if it clears and the user approves):** summed-artifact wiring in `scripts/generate_submission.py` / `predict.py` - designed in full only on approval (avoid speculative production changes).
 - **Test / verification:** `pytest` green; if wired, the artifact stays non-negative `datetime,count` with 6493 rows; `git diff` on production paths is empty otherwise.
 - **Expected outcome:** if dual-target clears the bar it is referred to the user for promotion; otherwise DROPPED with the comparison and a RESULTS.md note. Production unchanged either way absent explicit approval.
-- **DONE (commit pending):** Decision = **no promotion** (DROPPED for production); direct-count stays the deployed approach. The pre-registered decision metric (holdout RMSLE) did not improve - it is marginally worse for both models (xgb +0.0009, gbm +0.0016), well short of the >= 0.01 bar. The result is metric-dependent (dual-target helps the deployed XGBoost on RMSE/MAE/R2 and CV RMSLE but not on the headline holdout RMSLE) and within plausible single-split noise, so promotion is not warranted on the project's lead metric. Added a finding to `reports/RESULTS.md` "Limitations" recording the tested stretch. Production (`config`, models.yaml, `metrics.json`, prediction path, `generate_submission.py`) is unchanged. The code/experiment stays for reproducibility; the metric-dependent XGBoost gain is surfaced to the user, who may revisit if RMSE/MAE/CV are weighted over RMSLE.
+- **DONE (commit `ca4c913`):** Decision = **no promotion** (DROPPED for production); direct-count stays the deployed approach. The pre-registered decision metric (holdout RMSLE) did not improve - it is marginally worse for both models (xgb +0.0009, gbm +0.0016), well short of the >= 0.01 bar. The result is metric-dependent (dual-target helps the deployed XGBoost on RMSE/MAE/R2 and CV RMSLE but not on the headline holdout RMSLE) and within plausible single-split noise, so promotion is not warranted on the project's lead metric. Added a finding to `reports/RESULTS.md` "Limitations" recording the tested stretch. Production (`config`, models.yaml, `metrics.json`, prediction path, `generate_submission.py`) is unchanged. The code/experiment stays for reproducibility; the metric-dependent XGBoost gain is surfaced to the user, who may revisit if RMSE/MAE/CV are weighted over RMSLE.
