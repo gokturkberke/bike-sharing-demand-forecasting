@@ -1,0 +1,46 @@
+{
+  "models": {
+    "xgboost": {
+      "direct_count": {
+        "holdout": {
+          "mae": 28.0005,
+          "r2": 0.9325,
+          "rmse": 47.5398,
+          "rmsle": 0.3064
+        },
+        "cv_rmsle": 0.4633
+      },
+      "dual_target": {
+        "holdout": {
+          "rmsle": 0.3073,
+          "rmse": 45.7551,
+          "mae": 27.0638,
+          "r2": 0.9375
+        },
+        "cv_rmsle": 0.448
+      },
+      "holdout_rmsle_improvement": -0.0009
+    },
+    "gradient_boosting": {
+      "direct_count": {
+        "holdout": {
+          "mae": 31.0468,
+          "r2": 0.9203,
+          "rmse": 51.6604,
+          "rmsle": 0.312
+        },
+        "cv_rmsle": 0.4528
+      },
+      "dual_target": {
+        "holdout": {
+          "rmsle": 0.3136,
+          "rmse": 51.194,
+          "mae": 30.6048,
+          "r2": 0.9217
+        },
+        "cv_rmsle": 0.4607
+      },
+      "holdout_rmsle_improvement": -0.0016
+    }
+  }
+}

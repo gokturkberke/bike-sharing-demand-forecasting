@@ -58,6 +58,7 @@ The proposal raised a sequential-analysis goal (target lags such as `count(t-1)`
 - **Feature importance is reported two ways.** The impurity-based ranking (figure 13) is a quick in-training diagnostic but is biased toward continuous/high-cardinality features and can split credit between correlated inputs (e.g. `temp`/`atemp`). Holdout permutation importance (figure 23), scored with count-scale RMSLE, is the stronger, model-agnostic view and is now the primary importance evidence. Both share the usual caveat that importance among strongly correlated features (the `hour` family) can be distributed somewhat arbitrarily.
 - **`day`-of-month is intentionally excluded** as a feature because train (days 1-19) and test (days 20+) do not overlap on it; a schema-contract test enforces that train and test predictors stay identical.
 - **The three trees are statistically close**; the "best model" label should not be over-read.
+- **The dual-target stretch was tested and not adopted.** Predicting `casual` and `registered` with separate models and summing them (`docs/experiments/2026-06-05_dual-target.md`) did not beat the direct-`count` model on the headline metric: holdout RMSLE was marginally worse (XGBoost 0.306 → 0.307). It did improve the count-scale errors (XGBoost holdout RMSE 47.5 → 45.8, MAE 28.0 → 27.1) and CV RMSLE (0.463 → 0.448), so the result is metric-dependent rather than a clear loss; but on the right-skew-appropriate RMSLE the simpler single-`count` model holds, so it stays the deployed approach.
 
 ## Reproduce
 
