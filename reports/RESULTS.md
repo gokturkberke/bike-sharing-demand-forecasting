@@ -60,6 +60,19 @@ The proposal raised a sequential-analysis goal (target lags such as `count(t-1)`
 - **The three trees are statistically close**; the "best model" label should not be over-read.
 - **The dual-target stretch was tested and not adopted.** Predicting `casual` and `registered` with separate models and summing them (`docs/experiments/2026-06-05_dual-target.md`) did not beat the direct-`count` model on the headline metric: holdout RMSLE was marginally worse (XGBoost 0.306 → 0.307). It did improve the count-scale errors (XGBoost holdout RMSE 47.5 → 45.8, MAE 28.0 → 27.1) and CV RMSLE (0.463 → 0.448), so the result is metric-dependent rather than a clear loss; but on the right-skew-appropriate RMSLE the simpler single-`count` model holds, so it stays the deployed approach.
 
+## Experiments explored (Phases 8-13)
+
+Beyond the core pipeline, several ideas from the research notes were tested as gated experiments, each documented under `docs/experiments/`. What shipped and what did not:
+
+- **Permutation importance (adopted).** Replaced the impurity-based ranking with model-agnostic holdout permutation importance scored on count-scale RMSLE (figure 23) - the unbiased view now leads the feature-importance story.
+- **Validation gap diagnostic (adopted as a robustness check).** Adding a ~48-hour chronological gap to the CV folds barely moves the deployed model's CV (figure 24), confirming the estimate is not inflated by train/validation adjacency; `cv.gap` stays 0.
+- **XGBoost / Gradient Boosting tuning (dropped).** A RandomizedSearchCV lowered the chronological CV RMSLE but did not transfer to the day-of-month holdout, so the hand-chosen defaults were kept.
+- **Duan's smearing for peak underprediction (documented).** Correcting the `log1p` retransformation bias cut the top-quintile underprediction ~30% and was a small Pareto improvement on the holdout; shipped as a tested, documented correction (`bike_sharing.postprocess`), not wired into the default prediction path, since the all-metric gain sits within single-split noise.
+- **Environmental recalibration + Humidex (dropped).** A comfort index and fold-safe windspeed/atemp recalibration gave only small, sub-threshold gains; the environmental tier stays secondary.
+- **Dual-target casual + registered (dropped).** Separate models summed did not beat direct-`count` on the headline RMSLE (metric-dependent: better RMSE/MAE/CV, marginally worse RMSLE), so the simpler single-`count` model stays deployed.
+
+The throughline: the deployed direct-count XGBoost is unchanged across all of these, and the one real weakness - peak-hour underprediction - was shown to be a correctable retransformation bias, not a modeling failure.
+
 ## Reproduce
 
 ```bash
